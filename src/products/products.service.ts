@@ -40,13 +40,15 @@ export class ProductsService {
     return product;
   }
 
-  async create(input: CreateProductInput, adminId?: string): Promise<Product> {
+  async create(
+    input: CreateProductInput,
+    adminId?: string,
+  ): Promise<Product> {
     const product = new this.productModel(input);
 
     // Generar QR code
     const frontendUrl =
-      this.configService.get('BASE_URL') ||
-      'https://qr-platform-client-3keaq.ondigitalocean.app';
+      this.configService.get('BASE_URL') || 'http://localhost:5173';
     const qrUrl = `${frontendUrl}/product/${product._id}`;
     const qrCode = await this.qrService.generateQR(qrUrl);
     product.qrCode = qrCode;
@@ -76,5 +78,18 @@ export class ProductsService {
 
   async count(): Promise<number> {
     return this.productModel.countDocuments().exec();
+  }
+
+  async regenerateQR(id: string): Promise<Product> {
+    const product = await this.findOne(id);
+
+    // Regenerar QR code con la URL actual
+    const frontendUrl =
+      this.configService.get('BASE_URL') || 'http://localhost:5173';
+    const qrUrl = `${frontendUrl}/product/${product._id}`;
+    const qrCode = await this.qrService.generateQR(qrUrl);
+
+    product.qrCode = qrCode;
+    return product.save();
   }
 }

@@ -52,4 +52,12 @@ export class ProductsResolver {
   ): Promise<boolean> {
     return this.productsService.delete(id);
   }
+
+  @Mutation(() => Product)
+  @UseGuards(GqlAuthGuard)
+  async regenerateQR(
+    @Args('id', { type: () => ID }) id: string,
+  ): Promise<Product> {
+    return this.productsService.regenerateQR(id);
+  }
 }
