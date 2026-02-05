@@ -18,7 +18,7 @@ export class ProductsService {
   async findAll(skip = 0, limit = 50): Promise<Product[]> {
     return this.productModel
       .find()
-      .sort({ createdAt: -1 })
+      .sort({ name: 1 })
       .skip(skip)
       .limit(limit)
       .exec();
