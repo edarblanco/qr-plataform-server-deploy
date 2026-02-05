@@ -1,0 +1,188 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Analytics {
+  averageResponseTime: Float!
+  conversionRate: Float!
+  monthlyGoals: MonthlyGoals!
+  topProducts: [TopProduct!]!
+  totalLeads: Int!
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+type CSVExportResult {
+  content: String!
+  filename: String!
+  url: String!
+}
+
+input CreateLeadInput {
+  clientEmail: String!
+  clientName: String!
+  clientPhone: String
+  message: String
+  productId: String!
+}
+
+input CreateProductInput {
+  brand: String
+  description: String
+  image: String
+  name: String!
+  price: Float!
+  sku: String!
+  stock: Int!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type InventoryLog {
+  action: String!
+  admin: User
+  adminId: String!
+  createdAt: DateTime!
+  id: ID!
+  product: Product
+  productId: String!
+  snapshot: JSON!
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+type Lead {
+  clientEmail: String!
+  clientName: String!
+  clientPhone: String
+  createdAt: DateTime!
+  id: ID!
+  message: String
+  product: Product
+  productId: String!
+  status: LeadStatus!
+  updatedAt: DateTime!
+}
+
+"""Status of a lead"""
+enum LeadStatus {
+  CLOSED
+  CONTACTED
+  NEW
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+type MonthlyGoals {
+  conversionAchieved: Float!
+  conversionGoal: Float!
+  leadsAchieved: Int!
+  leadsGoal: Int!
+}
+
+type Mutation {
+  createLead(input: CreateLeadInput!): Lead!
+  createProduct(input: CreateProductInput!): Product!
+  deleteLead(id: ID!): Boolean!
+  deleteProduct(id: ID!): Boolean!
+  importCSV(csvContent: String!): [Product!]!
+  importProductsFromSquare: [Product!]!
+  login(input: LoginInput!): AuthPayload!
+  register(input: RegisterInput!): AuthPayload!
+  rollbackProduct(logId: ID!): Product!
+  updateLead(id: ID!, input: UpdateLeadInput!): Lead!
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+}
+
+type Product {
+  brand: String
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  image: String
+  name: String!
+  price: Float!
+  qrCode: String
+  sku: String!
+  stock: Int!
+  updatedAt: DateTime!
+}
+
+type Query {
+  analytics(endDate: DateTime, startDate: DateTime): Analytics!
+  exportCSV: CSVExportResult!
+  getSquareProducts: [SquareProduct!]!
+  inventoryLog(id: ID!): InventoryLog
+  inventoryLogs(limit: Int, productId: String, skip: Int): [InventoryLog!]!
+  lead(id: ID!): Lead
+  leads(limit: Int, skip: Int, status: LeadStatus): [Lead!]!
+  me: User!
+  product(id: ID!): Product
+  productBySku(sku: String!): Product
+  products(limit: Int, skip: Int): [Product!]!
+}
+
+input RegisterInput {
+  email: String!
+  name: String!
+  password: String!
+}
+
+type SquareProduct {
+  brand: String
+  category: String
+  description: String!
+  id: String!
+  image: String
+  name: String!
+  price: Float!
+  sku: String!
+  stock: Int!
+  variations: [SquareVariation!]!
+}
+
+type SquareVariation {
+  id: String!
+  name: String!
+  price: Float!
+  sku: String!
+}
+
+type TopProduct {
+  productId: String!
+  productName: String!
+  requestCount: Int!
+}
+
+input UpdateLeadInput {
+  status: LeadStatus
+}
+
+input UpdateProductInput {
+  brand: String
+  description: String
+  image: String
+  name: String
+  price: Float
+  stock: Int
+}
+
+type User {
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+  name: String!
+  role: String!
+}
