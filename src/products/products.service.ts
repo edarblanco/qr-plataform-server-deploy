@@ -40,15 +40,13 @@ export class ProductsService {
     return product;
   }
 
-  async create(
-    input: CreateProductInput,
-    adminId?: string,
-  ): Promise<Product> {
+  async create(input: CreateProductInput, adminId?: string): Promise<Product> {
     const product = new this.productModel(input);
 
     // Generar QR code
     const frontendUrl =
-      this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+      this.configService.get('BASE_URL') ||
+      'https://qr-platform-client-3keaq.ondigitalocean.app';
     const qrUrl = `${frontendUrl}/product/${product._id}`;
     const qrCode = await this.qrService.generateQR(qrUrl);
     product.qrCode = qrCode;
