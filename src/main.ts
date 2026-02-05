@@ -20,8 +20,9 @@ async function bootstrap() {
     }),
   );
 
-  const port = process.env.PORT || 4000;
-  await app.listen(port);
-  console.log(`🚀 Server running on http://localhost:${port}/graphql`);
+  const PORT = process.env.PORT || 3000;
+  await app.listen(PORT);
+  console.log(`La app esta corriendo en el puerto ${PORT}`);
+  console.log(`La app esta en modo ${process.env.NODE_ENV}`);
 }
 bootstrap();
