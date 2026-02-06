@@ -38,6 +38,8 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.0",
+    "@nestjs/throttler": "^6.5.0",
+    "@types/handlebars": "^4.1.0",
     "@vue/apollo-composable": "^4.2.2",
     "bcrypt": "^6.0.0",
     "cache-manager": "^7.2.8",
@@ -47,11 +49,13 @@
     "csv-parser": "^3.2.0",
     "graphql": "^16.12.0",
     "graphql-type-json": "^0.3.2",
+    "handlebars": "^4.7.8",
     "json2csv": "^6.0.0-alpha.2",
     "mongoose": "^9.1.5",
     "nodemailer": "^7.0.13",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "puppeteer": "^24.37.1",
     "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -105,6 +109,5 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  },
-  "packageManager": "yarn@4.12.0"
+  }
 }
