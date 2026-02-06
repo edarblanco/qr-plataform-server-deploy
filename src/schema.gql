@@ -4,10 +4,26 @@
 
 type Analytics {
   averageResponseTime: Float!
+  averageTicket: Float
   conversionRate: Float!
   monthlyGoals: MonthlyGoals!
   topProducts: [TopProduct!]!
   totalLeads: Int!
+  totalRevenue: Float
+}
+
+type AnalyticsComparison {
+  conversionGrowth: Float!
+  current: PeriodMetrics!
+  leadsGrowth: Float!
+  previous: PeriodMetrics!
+  quotationsGrowth: Float!
+  revenueGrowth: Float!
+}
+
+type AnalyticsTimeSeries {
+  dataPoints: [TimeSeriesDataPoint!]!
+  period: String!
 }
 
 type AuthPayload {
@@ -21,12 +37,34 @@ type CSVExportResult {
   url: String!
 }
 
+input ConvertQuotationToLeadInput {
+  clientEmail: String!
+  clientName: String!
+  clientPhone: String
+  company: String
+  message: String
+  quotationId: ID!
+}
+
+input CreateCustomerInput {
+  company: String
+  email: String!
+  name: String!
+  phone: String
+}
+
 input CreateLeadInput {
   clientEmail: String!
   clientName: String!
   clientPhone: String
   message: String
   productId: String!
+}
+
+input CreateNoteInput {
+  content: String!
+  customerId: ID!
+  isImportant: Boolean = false
 }
 
 input CreateProductInput {
@@ -37,6 +75,47 @@ input CreateProductInput {
   price: Float!
   sku: String!
   stock: Int!
+}
+
+input CreateQuotationInput {
+  customerId: ID
+  discount: Float = 0
+  items: [QuotationItemInput!]!
+  leadId: ID
+  notes: String
+  tax: Float = 0
+  validUntil: DateTime
+}
+
+type Customer {
+  company: String
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+  leads: [Lead!]
+  name: String!
+  notes: [CustomerNote!]
+  phone: String
+  stats: CustomerStats
+  updatedAt: DateTime!
+}
+
+type CustomerNote {
+  content: String!
+  createdAt: DateTime!
+  createdBy: String!
+  createdByUser: User
+  customerId: String!
+  id: ID!
+  isImportant: Boolean!
+  updatedAt: DateTime!
+}
+
+type CustomerStats {
+  acceptedQuotations: Int!
+  lastActivityDate: DateTime
+  totalLeads: Int!
+  totalQuotations: Int!
 }
 
 """
@@ -61,23 +140,31 @@ The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://
 scalar JSON
 
 type Lead {
+  assignedAt: DateTime
+  assignedTo: ID
+  assignedToUser: User
   clientEmail: String!
   clientName: String!
   clientPhone: String
   createdAt: DateTime!
+  customerId: ID
   id: ID!
   message: String
+  priority: Float!
   product: Product
   productId: String!
+  queuePosition: Float
   status: LeadStatus!
   updatedAt: DateTime!
 }
 
 """Status of a lead"""
 enum LeadStatus {
-  CLOSED
-  CONTACTED
-  NEW
+  ASSIGNED
+  COMPLETED
+  IN_PROGRESS
+  PENDING
+  REJECTED
 }
 
 input LoginInput {
@@ -93,17 +180,53 @@ type MonthlyGoals {
 }
 
 type Mutation {
+  acceptQuotation(id: ID!): Quotation!
+  completeLead(id: ID!): Lead!
+  convertQuotationToLead(input: ConvertQuotationToLeadInput!): Lead!
+  createCustomer(input: CreateCustomerInput!): Customer!
+  createCustomerNote(input: CreateNoteInput!): CustomerNote!
   createLead(input: CreateLeadInput!): Lead!
   createProduct(input: CreateProductInput!): Product!
+  createQuotation(input: CreateQuotationInput!): Quotation!
+  deleteCustomer(id: ID!): Boolean!
+  deleteCustomerNote(id: ID!): Boolean!
   deleteLead(id: ID!): Boolean!
   deleteProduct(id: ID!): Boolean!
+  deleteQuotation(id: ID!): Boolean!
+  deleteUser(id: ID!): Boolean!
   importCSV(csvContent: String!): [Product!]!
   importProductsFromSquare: [Product!]!
   login(input: LoginInput!): AuthPayload!
+  processLeadQueue: Boolean!
+  reassignLead(id: ID!, newVendedorId: ID): Boolean!
+  regenerateQR(id: ID!): Product!
   register(input: RegisterInput!): AuthPayload!
+  rejectLead(id: ID!): Lead!
+  rejectQuotation(id: ID!): Quotation!
   rollbackProduct(logId: ID!): Product!
+  sendQuotation(id: ID!): Quotation!
+  startWorkingOnLead(id: ID!): Lead!
+  toggleUserStatus(id: ID!): User!
+  updateAvailability(input: UpdateAvailabilityInput!): User!
+  updateCustomer(id: ID!, input: UpdateCustomerInput!): Customer!
+  updateCustomerNote(id: ID!, input: UpdateNoteInput!): CustomerNote!
   updateLead(id: ID!, input: UpdateLeadInput!): Lead!
   updateProduct(id: ID!, input: UpdateProductInput!): Product!
+  updateQuotation(id: ID!, input: UpdateQuotationInput!): Quotation!
+  updateUser(id: ID!, input: UpdateUserInput!): User!
+  updateUserRole(id: ID!, input: UpdateUserRoleInput!): User!
+}
+
+type PeriodMetrics {
+  acceptanceRate: Float!
+  acceptedQuotations: Int!
+  averageResponseTime: Float!
+  averageTicket: Float!
+  completedLeads: Int!
+  conversionRate: Float!
+  totalLeads: Int!
+  totalQuotationValue: Float!
+  totalQuotations: Int!
 }
 
 type Product {
@@ -120,8 +243,33 @@ type Product {
   updatedAt: DateTime!
 }
 
+type ProductConversion {
+  averageQuotationValue: Float!
+  completedLeads: Int!
+  leadConversionRate: Float!
+  productId: String!
+  productName: String!
+  productSku: String!
+  quotationConversionRate: Float!
+  quotationsAccepted: Int!
+  quotationsSent: Int!
+  totalLeads: Int!
+  totalRevenue: Float!
+}
+
+type ProductConversionAnalytics {
+  products: [ProductConversion!]!
+  totalProductsAnalyzed: Int!
+}
+
 type Query {
   analytics(endDate: DateTime, startDate: DateTime): Analytics!
+  analyticsComparison(currentEnd: DateTime!, currentStart: DateTime!, previousEnd: DateTime!, previousStart: DateTime!): AnalyticsComparison!
+  analyticsStatusDistribution(endDate: DateTime, startDate: DateTime): StatusDistributionAnalytics!
+  analyticsTimeSeries(endDate: DateTime!, period: String! = "day", startDate: DateTime!): AnalyticsTimeSeries!
+  availableVendedores: [User!]!
+  customer(id: ID!): Customer
+  customers: [Customer!]!
   exportCSV: CSVExportResult!
   getSquareProducts: [SquareProduct!]!
   inventoryLog(id: ID!): InventoryLog
@@ -129,15 +277,88 @@ type Query {
   lead(id: ID!): Lead
   leads(limit: Int, skip: Int, status: LeadStatus): [Lead!]!
   me: User!
+  myAssignedLeads: [Lead!]!
   product(id: ID!): Product
   productBySku(sku: String!): Product
+  productConversionAnalytics(endDate: DateTime, limit: Int! = 20, startDate: DateTime): ProductConversionAnalytics!
   products(limit: Int, skip: Int): [Product!]!
+  queueStats: QueueStats!
+  quotation(id: ID!): Quotation
+  quotationPdf(id: ID!): String!
+  quotations(createdBy: ID, customerId: ID, status: String): [Quotation!]!
+  user(id: ID!): User
+  userStats: UserStats!
+  users: [User!]!
+}
+
+type QueueStats {
+  averageWaitTime: Float!
+  oldestLead: DateTime
+  totalInQueue: Int!
+}
+
+type Quotation {
+  acceptedAt: DateTime
+  createdAt: DateTime!
+  createdBy: String!
+  createdByUser: User
+  customer: Customer
+  customerId: String!
+  discount: Float!
+  id: ID!
+  items: [QuotationItem!]!
+  lead: Lead
+  leadId: ID
+  notes: String
+  rejectedAt: DateTime
+  sentAt: DateTime
+  status: QuotationStatus!
+  subtotal: Float!
+  tax: Float!
+  total: Float!
+  updatedAt: DateTime!
+  validUntil: DateTime
+}
+
+type QuotationItem {
+  notes: String
+  product: Product
+  productId: ID!
+  productName: String!
+  productSku: String
+  quantity: Int!
+  total: Float!
+  unitPrice: Float!
+}
+
+input QuotationItemInput {
+  notes: String
+  productId: ID!
+  productName: String!
+  productSku: String
+  quantity: Int!
+  total: Float!
+  unitPrice: Float!
+}
+
+"""Status of a quotation"""
+enum QuotationStatus {
+  ACCEPTED
+  DRAFT
+  EXPIRED
+  REJECTED
+  SENT
 }
 
 input RegisterInput {
   email: String!
   name: String!
   password: String!
+}
+
+type RoleCount {
+  count: Int!
+  role: String!
 }
 
 type SquareProduct {
@@ -160,14 +381,50 @@ type SquareVariation {
   sku: String!
 }
 
+type StatusDistribution {
+  count: Int!
+  percentage: Float!
+  status: String!
+}
+
+type StatusDistributionAnalytics {
+  leadStatuses: [StatusDistribution!]!
+  quotationStatuses: [StatusDistribution!]!
+}
+
+type TimeSeriesDataPoint {
+  acceptedQuotations: Int!
+  completedLeads: Int!
+  date: String!
+  leads: Int!
+  quotations: Int!
+  revenue: Float!
+}
+
 type TopProduct {
   productId: String!
   productName: String!
   requestCount: Int!
 }
 
+input UpdateAvailabilityInput {
+  availability: String!
+}
+
+input UpdateCustomerInput {
+  company: String
+  email: String
+  name: String
+  phone: String
+}
+
 input UpdateLeadInput {
   status: LeadStatus
+}
+
+input UpdateNoteInput {
+  content: String!
+  isImportant: Boolean
 }
 
 input UpdateProductInput {
@@ -179,10 +436,43 @@ input UpdateProductInput {
   stock: Int
 }
 
+input UpdateQuotationInput {
+  discount: Float
+  items: [QuotationItemInput!]
+  notes: String
+  tax: Float
+  validUntil: DateTime
+}
+
+input UpdateUserInput {
+  email: String
+  name: String
+  password: String
+  role: String
+}
+
+input UpdateUserRoleInput {
+  role: String!
+}
+
 type User {
+  availability: UserAvailability!
   createdAt: DateTime!
   email: String!
   id: ID!
+  isActive: Boolean!
   name: String!
   role: String!
+}
+
+"""Availability status of a user (vendedor)"""
+enum UserAvailability {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+type UserStats {
+  byRole: [RoleCount!]!
+  total: Int!
 }

@@ -2,9 +2,11 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
 export enum LeadStatus {
-  NEW = 'NEW',
-  CONTACTED = 'CONTACTED',
-  CLOSED = 'CLOSED',
+  PENDING = 'pending',
+  ASSIGNED = 'assigned',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  REJECTED = 'rejected',
 }
 
 @Schema({
@@ -25,6 +27,9 @@ export class Lead extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Product', required: true })
   productId: string;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Customer', default: null })
+  customerId: string;
+
   @Prop({ required: true })
   clientName: string;
 
@@ -37,8 +42,20 @@ export class Lead extends Document {
   @Prop()
   message: string;
 
-  @Prop({ type: String, enum: LeadStatus, default: LeadStatus.NEW })
+  @Prop({ type: String, enum: LeadStatus, default: LeadStatus.PENDING })
   status: LeadStatus;
+
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
+  assignedTo: string;
+
+  @Prop({ type: Number, default: null })
+  queuePosition: number;
+
+  @Prop({ type: Number, default: 0 })
+  priority: number;
+
+  @Prop({ type: Date, default: null })
+  assignedAt: Date;
 
   @Prop({ type: Date })
   createdAt: Date;

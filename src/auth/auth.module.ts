@@ -8,6 +8,8 @@ import { AuthResolver } from './auth.resolver';
 import { JwtStrategy } from './jwt.strategy';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { EmailModule } from '../email/email.module';
+import { RolesGuard } from './guards/roles.guard';
+import { PermissionsGuard } from './guards/permissions.guard';
 
 @Module({
   imports: [
@@ -25,7 +27,7 @@ import { EmailModule } from '../email/email.module';
     }),
     EmailModule,
   ],
-  providers: [AuthService, AuthResolver, JwtStrategy],
-  exports: [AuthService, JwtStrategy],
+  providers: [AuthService, AuthResolver, JwtStrategy, RolesGuard, PermissionsGuard],
+  exports: [AuthService, JwtStrategy, RolesGuard, PermissionsGuard],
 })
 export class AuthModule {}

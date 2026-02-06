@@ -5,12 +5,17 @@ import { Product } from './entities/product.entity';
 import { CreateProductInput } from './dto/create-product.input';
 import { UpdateProductInput } from './dto/update-product.input';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/enums/permission.enum';
 
 @Resolver(() => Product)
 export class ProductsResolver {
   constructor(private readonly productsService: ProductsService) {}
 
   @Query(() => [Product], { name: 'products' })
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_READ)
   async findAll(
     @Args('skip', { type: () => Int, nullable: true }) skip?: number,
     @Args('limit', { type: () => Int, nullable: true }) limit?: number,
@@ -19,17 +24,22 @@ export class ProductsResolver {
   }
 
   @Query(() => Product, { name: 'product', nullable: true })
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_READ)
   async findOne(@Args('id', { type: () => ID }) id: string): Promise<Product> {
     return this.productsService.findOne(id);
   }
 
   @Query(() => Product, { name: 'productBySku', nullable: true })
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_READ)
   async findBySku(@Args('sku') sku: string): Promise<Product> {
     return this.productsService.findBySku(sku);
   }
 
   @Mutation(() => Product)
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_CREATE)
   async createProduct(
     @Args('input') input: CreateProductInput,
   ): Promise<Product> {
@@ -37,7 +47,8 @@ export class ProductsResolver {
   }
 
   @Mutation(() => Product)
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_UPDATE)
   async updateProduct(
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdateProductInput,
@@ -46,7 +57,8 @@ export class ProductsResolver {
   }
 
   @Mutation(() => Boolean)
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_DELETE)
   async deleteProduct(
     @Args('id', { type: () => ID }) id: string,
   ): Promise<boolean> {
@@ -54,7 +66,8 @@ export class ProductsResolver {
   }
 
   @Mutation(() => Product)
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_UPDATE)
   async regenerateQR(
     @Args('id', { type: () => ID }) id: string,
   ): Promise<Product> {

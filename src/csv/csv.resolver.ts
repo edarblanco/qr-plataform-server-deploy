@@ -4,13 +4,17 @@ import { CsvService } from './csv.service';
 import { CSVExportResult } from './entities/csv-export-result.entity';
 import { Product } from '../products/entities/product.entity';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/enums/permission.enum';
 
 @Resolver()
 export class CsvResolver {
   constructor(private readonly csvService: CsvService) {}
 
   @Query(() => CSVExportResult)
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_EXPORT)
   async exportCSV(): Promise<CSVExportResult> {
     const csvContent = await this.csvService.exportToCSV();
     const filename = `products_export_${Date.now()}.csv`;
@@ -23,7 +27,8 @@ export class CsvResolver {
   }
 
   @Mutation(() => [Product])
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_IMPORT)
   async importCSV(
     @Args('csvContent', { type: () => String }) csvContent: string,
   ): Promise<Product[]> {

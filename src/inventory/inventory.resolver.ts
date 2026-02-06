@@ -14,6 +14,9 @@ import { ProductsService } from '../products/products.service';
 import { InventoryLog } from './entities/inventory-log.entity';
 import { Product } from '../products/entities/product.entity';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/enums/permission.enum';
 
 @Resolver(() => InventoryLog)
 export class InventoryResolver {
@@ -23,7 +26,8 @@ export class InventoryResolver {
   ) {}
 
   @Query(() => [InventoryLog], { name: 'inventoryLogs' })
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.INVENTORY_READ)
   async findLogs(
     @Args('productId', { type: () => String, nullable: true })
     productId?: string,
@@ -34,7 +38,8 @@ export class InventoryResolver {
   }
 
   @Query(() => InventoryLog, { name: 'inventoryLog', nullable: true })
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.INVENTORY_READ)
   async findOne(
     @Args('id', { type: () => ID }) id: string,
   ): Promise<InventoryLog> {
@@ -42,7 +47,8 @@ export class InventoryResolver {
   }
 
   @Mutation(() => Product)
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.INVENTORY_ROLLBACK)
   async rollbackProduct(
     @Args('logId', { type: () => ID }) logId: string,
   ): Promise<Product> {

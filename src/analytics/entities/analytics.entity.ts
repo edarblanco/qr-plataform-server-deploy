@@ -43,4 +43,10 @@ export class Analytics {
 
   @Field(() => MonthlyGoals)
   monthlyGoals: MonthlyGoals;
+
+  @Field(() => Float, { nullable: true })
+  averageTicket?: number;
+
+  @Field(() => Float, { nullable: true })
+  totalRevenue?: number;
 }

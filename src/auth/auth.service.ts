@@ -12,6 +12,7 @@ import { RegisterInput } from './dto/register.input';
 import { LoginInput } from './dto/login.input';
 import { AuthPayload } from './entities/auth-payload.entity';
 import { EmailService } from '../email/email.service';
+import { Role } from './enums/role.enum';
 
 @Injectable()
 export class AuthService {
@@ -38,7 +39,7 @@ export class AuthService {
       email,
       password: hashedPassword,
       name,
-      role: 'admin',
+      role: Role.ADMIN,
     });
 
     const savedUser = await user.save();
@@ -55,6 +56,7 @@ export class AuthService {
     const token = this.jwtService.sign({
       sub: savedUser._id.toString(),
       email: savedUser.email,
+      role: savedUser.role,
     });
 
     return {
@@ -64,6 +66,8 @@ export class AuthService {
         email: savedUser.email,
         name: savedUser.name,
         role: savedUser.role,
+        availability: savedUser.availability,
+        isActive: savedUser.isActive,
         createdAt: savedUser.createdAt,
       },
     };
@@ -78,6 +82,10 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    if (!user.isActive) {
+      throw new UnauthorizedException('Usuario inactivo. Contacte al administrador.');
+    }
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
@@ -88,6 +96,7 @@ export class AuthService {
     const token = this.jwtService.sign({
       sub: user._id.toString(),
       email: user.email,
+      role: user.role,
     });
 
     return {
@@ -97,6 +106,8 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        availability: user.availability,
+        isActive: user.isActive,
         createdAt: user.createdAt,
       },
     };

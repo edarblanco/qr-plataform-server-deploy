@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cotización {{quotationNumber}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #3b82f6;
+            --muted: #6b7280;
+            --paper: #ffffff;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --radius: 12px;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #f9fafb;
+            color: #111827;
+            padding: 1.5rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .card {
+            max-width: 800px;
+            margin: auto;
+            background: var(--paper);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+
+        header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1.5rem;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .company-info h1 {
+            margin: 0;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .company-info p {
+            margin: 0.25rem 0;
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        .quotation-info {
+            text-align: right;
+        }
+
+        .quotation-info h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .quotation-info p {
+            margin: 0.25rem 0;
+            font-size: 0.875rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-top: 0.5rem;
+        }
+
+        .status-draft {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-sent {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-accepted {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .customer-section {
+            margin-bottom: 2rem;
+        }
+
+        .customer-section h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .customer-section p {
+            margin: 0.25rem 0;
+            font-size: 0.9375rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+        }
+
+        thead {
+            background: #f9fafb;
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        th:last-child,
+        td:last-child {
+            text-align: right;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 0.75rem;
+            font-size: 0.9375rem;
+        }
+
+        .item-name {
+            font-weight: 500;
+        }
+
+        .item-sku {
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        .summary {
+            margin-left: auto;
+            width: 300px;
+            margin-top: 1rem;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-size: 0.9375rem;
+        }
+
+        .summary-row.total {
+            border-top: 2px solid var(--border);
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+
+        .notes {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: var(--radius);
+            border-left: 4px solid var(--accent);
+        }
+
+        .notes h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .notes p {
+            margin: 0;
+            font-size: 0.9375rem;
+            color: #374151;
+        }
+
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <header>
+            <div class="company-info">
+                <h1>{{companyName}}</h1>
+                {{#if companyAddress}}
+                <p>{{companyAddress}}</p>
+                {{/if}}
+                {{#if companyPhone}}
+                <p>Tel: {{companyPhone}}</p>
+                {{/if}}
+                {{#if companyEmail}}
+                <p>Email: {{companyEmail}}</p>
+                {{/if}}
+            </div>
+            <div class="quotation-info">
+                <h2>Cotización</h2>
+                <p><strong>#{{quotationNumber}}</strong></p>
+                <p>Fecha: {{date}}</p>
+                {{#if validUntil}}
+                <p>Válida hasta: {{validUntil}}</p>
+                {{/if}}
+                <span class="status-badge status-{{status}}">{{statusText}}</span>
+            </div>
+        </header>
+
+        <div class="customer-section">
+            <h3>Cliente</h3>
+            <p><strong>{{customer.name}}</strong></p>
+            {{#if customer.company}}
+            <p>{{customer.company}}</p>
+            {{/if}}
+            <p>{{customer.email}}</p>
+            {{#if customer.phone}}
+            <p>{{customer.phone}}</p>
+            {{/if}}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th style="text-align: center;">Cantidad</th>
+                    <th>Precio Unit.</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each items}}
+                <tr>
+                    <td>
+                        <div class="item-name">{{this.productName}}</div>
+                        {{#if this.productSku}}
+                        <div class="item-sku">SKU: {{this.productSku}}</div>
+                        {{/if}}
+                        {{#if this.notes}}
+                        <div class="item-sku">{{this.notes}}</div>
+                        {{/if}}
+                    </td>
+                    <td style="text-align: center;">{{this.quantity}}</td>
+                    <td>${{this.unitPrice}}</td>
+                    <td>${{this.total}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+
+        <div class="summary">
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span>${{subtotal}}</span>
+            </div>
+            {{#if discount}}
+            <div class="summary-row">
+                <span>Descuento:</span>
+                <span>-${{discount}}</span>
+            </div>
+            {{/if}}
+            {{#if tax}}
+            <div class="summary-row">
+                <span>Impuesto:</span>
+                <span>${{tax}}</span>
+            </div>
+            {{/if}}
+            <div class="summary-row total">
+                <span>Total:</span>
+                <span>${{total}}</span>
+            </div>
+        </div>
+
+        {{#if notes}}
+        <div class="notes">
+            <h4>Notas</h4>
+            <p>{{notes}}</p>
+        </div>
+        {{/if}}
+
+        <footer>
+            <p>Gracias por su preferencia</p>
+            <p>Esta cotización es válida por {{validityDays}} días desde la fecha de emisión</p>
+        </footer>
+    </div>
+</body>
+
+</html>

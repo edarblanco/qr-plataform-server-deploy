@@ -5,6 +5,9 @@ import { ProductsService } from '../products/products.service';
 import { SquareProduct } from './entities/square-product.entity';
 import { Product } from '../products/entities/product.entity';
 import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/enums/permission.enum';
 
 @Resolver(() => SquareProduct)
 export class SquareResolver {
@@ -14,7 +17,8 @@ export class SquareResolver {
   ) {}
 
   @Query(() => [SquareProduct], { name: 'getSquareProducts' })
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_READ)
   async getSquareProducts(): Promise<SquareProduct[]> {
     console.log('🔵 [RESOLVER] getSquareProducts called');
     const startTime = Date.now();
@@ -30,7 +34,8 @@ export class SquareResolver {
   }
 
   @Mutation(() => [Product], { name: 'importProductsFromSquare' })
-  @UseGuards(GqlAuthGuard)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_IMPORT)
   async importProductsFromSquare(): Promise<Product[]> {
     console.log('🔵 [RESOLVER] importProductsFromSquare called');
     const startTime = Date.now();
