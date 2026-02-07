@@ -70,3 +70,6 @@ export const LeadSchema = SchemaFactory.createForClass(Lead);
 LeadSchema.virtual('id').get(function() {
   return this._id.toHexString();
 });
+
+// Text index for search across client info and message
+LeadSchema.index({ clientName: 'text', clientEmail: 'text', message: 'text' });

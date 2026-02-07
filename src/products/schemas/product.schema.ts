@@ -53,3 +53,6 @@ export const ProductSchema = SchemaFactory.createForClass(Product);
 ProductSchema.virtual('id').get(function() {
   return this._id.toHexString();
 });
+
+// Text index for search across multiple fields
+ProductSchema.index({ name: 'text', sku: 'text', brand: 'text', description: 'text' });

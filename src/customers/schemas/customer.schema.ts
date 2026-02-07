@@ -45,5 +45,5 @@ CustomerSchema.virtual('id').get(function() {
   return this._id.toHexString();
 });
 
-// Index for fast email lookups
-CustomerSchema.index({ email: 1 });
+// Text index for search across name and email
+CustomerSchema.index({ name: 'text', email: 'text' });

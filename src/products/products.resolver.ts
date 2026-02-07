@@ -24,8 +24,6 @@ export class ProductsResolver {
   }
 
   @Query(() => Product, { name: 'product', nullable: true })
-  @UseGuards(GqlAuthGuard, PermissionsGuard)
-  @Permissions(Permission.PRODUCTS_READ)
   async findOne(@Args('id', { type: () => ID }) id: string): Promise<Product> {
     return this.productsService.findOne(id);
   }
