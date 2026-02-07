@@ -23,6 +23,13 @@ export class ProductsResolver {
     return this.productsService.findAll(skip, limit);
   }
 
+  @Query(() => Int, { name: 'productsCount' })
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_READ)
+  async count(): Promise<number> {
+    return this.productsService.count();
+  }
+
   @Query(() => Product, { name: 'product', nullable: true })
   async findOne(@Args('id', { type: () => ID }) id: string): Promise<Product> {
     return this.productsService.findOne(id);

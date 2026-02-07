@@ -290,6 +290,7 @@ type Query {
   productBySku(sku: String!): Product
   productConversionAnalytics(endDate: DateTime, limit: Int! = 20, startDate: DateTime): ProductConversionAnalytics!
   products(limit: Int, skip: Int): [Product!]!
+  productsCount: Int!
   queueStats: QueueStats!
   quotation(id: ID!): Quotation
   quotationPdf(id: ID!): String!
