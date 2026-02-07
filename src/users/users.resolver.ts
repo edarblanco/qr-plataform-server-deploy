@@ -36,6 +36,24 @@ export class UsersResolver {
 
   @Mutation(() => User)
   @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.USERS_CREATE)
+  async createUser(
+    @Args('input') input: CreateUserInput,
+  ): Promise<User> {
+    const user = await this.usersService.create(input);
+    return {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      availability: user.availability,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+    };
+  }
+
+  @Mutation(() => User)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
   @Permissions(Permission.USERS_UPDATE)
   async updateUser(
     @Args('id', { type: () => ID }) id: string,

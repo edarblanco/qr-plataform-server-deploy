@@ -87,6 +87,13 @@ input CreateQuotationInput {
   validUntil: DateTime
 }
 
+input CreateUserInput {
+  email: String!
+  name: String!
+  password: String!
+  role: String!
+}
+
 type Customer {
   company: String
   createdAt: DateTime!
@@ -188,6 +195,7 @@ type Mutation {
   createLead(input: CreateLeadInput!): Lead!
   createProduct(input: CreateProductInput!): Product!
   createQuotation(input: CreateQuotationInput!): Quotation!
+  createUser(input: CreateUserInput!): User!
   deleteCustomer(id: ID!): Boolean!
   deleteCustomerNote(id: ID!): Boolean!
   deleteLead(id: ID!): Boolean!
