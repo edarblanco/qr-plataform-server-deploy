@@ -1,18 +1,25 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Quotation, QuotationStatus } from './schemas/quotation.schema';
 import { Lead, LeadStatus } from '../leads/schemas/lead.schema';
 import { Customer } from '../customers/schemas/customer.schema';
 import { PdfService } from '../pdf/pdf.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { PushService } from '../notifications/services/push.service';
+import { NotificationType } from '../notifications/enums/notification-type.enum';
 
 @Injectable()
 export class QuotationsService {
+  private readonly logger = new Logger(QuotationsService.name);
+
   constructor(
     @InjectModel(Quotation.name) private quotationModel: Model<Quotation>,
     @InjectModel(Lead.name) private leadModel: Model<Lead>,
     @InjectModel(Customer.name) private customerModel: Model<Customer>,
     private readonly pdfService: PdfService,
+    private notificationsService: NotificationsService,
+    private pushService: PushService,
   ) {}
 
   async findAll(filters?: {
@@ -154,7 +161,18 @@ export class QuotationsService {
     quotation.status = QuotationStatus.ACCEPTED;
     quotation.acceptedAt = new Date();
 
-    return quotation.save();
+    const saved = await quotation.save();
+
+    // Send notification to vendedor (createdBy)
+    if (quotation.createdBy) {
+      try {
+        await this.sendQuotationAcceptedNotification(quotation);
+      } catch (error) {
+        this.logger.error(`Failed to send notification for quotation ${id}:`, error);
+      }
+    }
+
+    return saved;
   }
 
   async rejectQuotation(id: string): Promise<any> {
@@ -170,7 +188,18 @@ export class QuotationsService {
     quotation.status = QuotationStatus.REJECTED;
     quotation.rejectedAt = new Date();
 
-    return quotation.save();
+    const saved = await quotation.save();
+
+    // Send notification to vendedor (createdBy)
+    if (quotation.createdBy) {
+      try {
+        await this.sendQuotationRejectedNotification(quotation);
+      } catch (error) {
+        this.logger.error(`Failed to send notification for quotation ${id}:`, error);
+      }
+    }
+
+    return saved;
   }
 
   async expireQuotations(): Promise<void> {
@@ -324,5 +353,47 @@ export class QuotationsService {
     await quotation.save();
 
     return savedLead;
+  }
+
+  /**
+   * Send notification when quotation is accepted
+   */
+  private async sendQuotationAcceptedNotification(quotation: Quotation): Promise<void> {
+    const customer = await this.customerModel.findById(quotation.customerId).exec();
+    const customerName = customer?.name || 'un cliente';
+
+    // Create notification in database (push is sent automatically)
+    await this.notificationsService.create(
+      quotation.createdBy,
+      'Cotización Aceptada',
+      `${customerName} ha aceptado la cotización`,
+      NotificationType.QUOTATION_ACCEPTED,
+      {
+        quotationId: quotation._id.toString(),
+        customerId: quotation.customerId?.toString(),
+        customerName,
+      },
+    );
+  }
+
+  /**
+   * Send notification when quotation is rejected
+   */
+  private async sendQuotationRejectedNotification(quotation: Quotation): Promise<void> {
+    const customer = await this.customerModel.findById(quotation.customerId).exec();
+    const customerName = customer?.name || 'un cliente';
+
+    // Create notification in database (push is sent automatically)
+    await this.notificationsService.create(
+      quotation.createdBy,
+      'Cotización Rechazada',
+      `${customerName} ha rechazado la cotización`,
+      NotificationType.QUOTATION_REJECTED,
+      {
+        quotationId: quotation._id.toString(),
+        customerId: quotation.customerId?.toString(),
+        customerName,
+      },
+    );
   }
 }

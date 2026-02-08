@@ -24,6 +24,7 @@ import { QrModule } from './qr/qr.module';
 import { EmailModule } from './email/email.module';
 import { SquareModule } from './square/square.module';
 import { PdfModule } from './pdf/pdf.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { PdfModule } from './pdf/pdf.module';
     EmailModule,
     SquareModule,
     PdfModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

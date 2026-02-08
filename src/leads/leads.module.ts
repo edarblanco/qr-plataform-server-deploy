@@ -8,6 +8,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { ProductsModule } from '../products/products.module';
 import { EmailModule } from '../email/email.module';
 import { CustomersModule } from '../customers/customers.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CustomersModule } from '../customers/customers.module';
     ProductsModule,
     EmailModule,
     CustomersModule,
+    NotificationsModule,
   ],
   providers: [LeadsService, LeadsResolver, LeadAssignmentService],
   exports: [LeadsService, LeadAssignmentService],

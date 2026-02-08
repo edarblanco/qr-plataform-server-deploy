@@ -8,6 +8,7 @@ import { Customer, CustomerSchema } from '../customers/schemas/customer.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { Product, ProductSchema } from '../products/schemas/product.schema';
 import { PdfModule } from '../pdf/pdf.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PdfModule } from '../pdf/pdf.module';
       { name: Product.name, schema: ProductSchema },
     ]),
     PdfModule,
+    NotificationsModule,
   ],
   providers: [QuotationsService, QuotationsResolver, QuotationItemResolver],
   exports: [QuotationsService],

@@ -4,6 +4,9 @@ import { Model } from 'mongoose';
 import { Lead, LeadStatus } from './schemas/lead.schema';
 import { User, UserAvailability } from '../users/schemas/user.schema';
 import { Role } from '../auth/enums/role.enum';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { PushService } from '../notifications/services/push.service';
+import { NotificationType } from '../notifications/enums/notification-type.enum';
 
 @Injectable()
 export class LeadAssignmentService {
@@ -12,6 +15,8 @@ export class LeadAssignmentService {
   constructor(
     @InjectModel(Lead.name) private leadModel: Model<Lead>,
     @InjectModel(User.name) private userModel: Model<User>,
+    private notificationsService: NotificationsService,
+    private pushService: PushService,
   ) {}
 
   /**
@@ -59,8 +64,12 @@ export class LeadAssignmentService {
 
     this.logger.log(`Lead ${leadId} assigned to vendedor ${vendedorWithFewestLeads}`);
 
-    // TODO: Send push notification to vendedor
-    // await this.notificationService.sendPushToVendedor(vendedorWithFewestLeads, lead);
+    // Send push notification to vendedor
+    try {
+      await this.sendLeadAssignedNotification(vendedorWithFewestLeads, lead);
+    } catch (error) {
+      this.logger.error(`Failed to send notification for lead ${leadId}:`, error);
+    }
 
     return true;
   }
@@ -213,5 +222,23 @@ export class LeadAssignmentService {
       averageWaitTime: totalWaitTime / queuedLeads.length / 1000 / 60, // in minutes
       oldestLead: queuedLeads[0].createdAt,
     };
+  }
+
+  /**
+   * Send notification when lead is assigned
+   */
+  private async sendLeadAssignedNotification(vendedorId: string, lead: Lead): Promise<void> {
+    // Create notification in database (push is sent automatically)
+    await this.notificationsService.create(
+      vendedorId,
+      'Nuevo Lead Asignado',
+      `Se te ha asignado un nuevo lead de ${lead.clientName || 'un cliente'}`,
+      NotificationType.LEAD_ASSIGNED,
+      {
+        leadId: lead._id.toString(),
+        clientName: lead.clientName,
+        productId: lead.productId,
+      },
+    );
   }
 }
