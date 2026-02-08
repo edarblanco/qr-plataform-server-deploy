@@ -120,4 +120,31 @@ export class AuthService {
     }
     return user;
   }
+
+  async revalidateToken(user: User): Promise<AuthPayload> {
+    // Verify user is still active
+    if (!user.isActive) {
+      throw new UnauthorizedException('Usuario inactivo. Contacte al administrador.');
+    }
+
+    // Generate new JWT token
+    const token = this.jwtService.sign({
+      sub: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    });
+
+    return {
+      token,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        availability: user.availability,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+      },
+    };
+  }
 }

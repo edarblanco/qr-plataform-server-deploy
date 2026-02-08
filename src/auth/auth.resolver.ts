@@ -40,4 +40,11 @@ export class AuthResolver {
       createdAt: user.createdAt,
     };
   }
+
+  @Query(() => AuthPayload)
+  @UseGuards(GqlAuthGuard)
+  async revalidateToken(@Context() context): Promise<AuthPayload> {
+    const user = context.req.user;
+    return this.authService.revalidateToken(user);
+  }
 }

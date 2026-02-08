@@ -326,6 +326,7 @@ type Query {
   quotation(id: ID!): Quotation
   quotationPdf(id: ID!): String!
   quotations(createdBy: ID, customerId: ID, status: String): [Quotation!]!
+  revalidateToken: AuthPayload!
   unreadCount: Int!
   user(id: ID!): User
   userStats: UserStats!
