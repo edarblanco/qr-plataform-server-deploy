@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Lead, LeadStatus } from './schemas/lead.schema';
 import { User, UserAvailability } from '../users/schemas/user.schema';
 import { Role } from '../auth/enums/role.enum';
@@ -86,12 +87,23 @@ export class LeadAssignmentService {
 
     const nextPosition = lastInQueue?.queuePosition ? lastInQueue.queuePosition + 1 : 1;
 
-    await this.leadModel.findByIdAndUpdate(leadId, {
-      status: LeadStatus.PENDING,
-      queuePosition: nextPosition,
-    }).exec();
+    const lead = await this.leadModel.findByIdAndUpdate(
+      leadId,
+      {
+        status: LeadStatus.PENDING,
+        queuePosition: nextPosition,
+      },
+      { new: true },
+    ).exec();
 
     this.logger.log(`Lead ${leadId} added to queue at position ${nextPosition}`);
+
+    // Notify admins that lead is queued (async, no await to not block)
+    if (lead) {
+      this.notifyAdminsLeadQueued(lead).catch((err) =>
+        this.logger.error('Error notifying admins about queued lead:', err),
+      );
+    }
   }
 
   /**
@@ -240,5 +252,154 @@ export class LeadAssignmentService {
         productId: lead.productId,
       },
     );
+  }
+
+  /**
+   * Get all admin user IDs
+   */
+  async getAllAdminIds(): Promise<string[]> {
+    const admins = await this.userModel
+      .find({ role: Role.ADMIN })
+      .select('_id')
+      .exec();
+
+    return admins.map((admin) => admin._id.toString());
+  }
+
+  /**
+   * Notify all admins when a new lead is received
+   */
+  async notifyAdminsNewLead(lead: Lead, productName?: string): Promise<void> {
+    const adminIds = await this.getAllAdminIds();
+
+    if (adminIds.length === 0) {
+      this.logger.warn('No admins found to notify');
+      return;
+    }
+
+    const productInfo = productName ? ` - ${productName}` : '';
+
+    // Send notification to each admin
+    const notifyPromises = adminIds.map((adminId) =>
+      this.notificationsService.create(
+        adminId,
+        '📋 Nuevo Lead Recibido',
+        `De: ${lead.clientName || 'Cliente'}${productInfo}`,
+        NotificationType.LEAD_RECEIVED,
+        {
+          leadId: lead._id.toString(),
+          clientName: lead.clientName,
+          clientEmail: lead.clientEmail,
+          productId: lead.productId,
+        },
+      ),
+    );
+
+    await Promise.all(notifyPromises);
+    this.logger.log(`Notified ${adminIds.length} admin(s) about new lead ${lead._id}`);
+  }
+
+  /**
+   * Notify all admins when a lead goes to queue (no vendedores available)
+   */
+  async notifyAdminsLeadQueued(lead: Lead): Promise<void> {
+    const adminIds = await this.getAllAdminIds();
+
+    if (adminIds.length === 0) {
+      return;
+    }
+
+    const notifyPromises = adminIds.map((adminId) =>
+      this.notificationsService.create(
+        adminId,
+        '⚠️ Lead en Cola - Sin vendedores',
+        `${lead.clientName || 'Un cliente'} está esperando asignación`,
+        NotificationType.LEAD_QUEUED,
+        {
+          leadId: lead._id.toString(),
+          clientName: lead.clientName,
+          queuePosition: lead.queuePosition,
+        },
+      ),
+    );
+
+    await Promise.all(notifyPromises);
+    this.logger.log(`Notified admins: lead ${lead._id} queued`);
+  }
+
+  /**
+   * Monitor queue and send alerts to admins
+   * - Alert if 3+ leads in queue
+   * - Alert if any lead waiting 10+ minutes
+   * Runs every 5 minutes
+   */
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async monitorQueue(): Promise<void> {
+    const queuedLeads = await this.leadModel
+      .find({
+        status: LeadStatus.PENDING,
+        queuePosition: { $ne: null },
+      })
+      .sort({ createdAt: 1 })
+      .exec();
+
+    if (queuedLeads.length === 0) {
+      return;
+    }
+
+    const adminIds = await this.getAllAdminIds();
+    if (adminIds.length === 0) {
+      return;
+    }
+
+    const now = new Date();
+
+    // Check for queue alert (3+ leads)
+    if (queuedLeads.length >= 3) {
+      const notifyPromises = adminIds.map((adminId) =>
+        this.notificationsService.create(
+          adminId,
+          '📊 Alerta de Cola',
+          `Hay ${queuedLeads.length} leads esperando asignación`,
+          NotificationType.QUEUE_ALERT,
+          {
+            queueSize: queuedLeads.length,
+          },
+        ),
+      );
+
+      await Promise.all(notifyPromises);
+      this.logger.log(`Queue alert sent: ${queuedLeads.length} leads waiting`);
+    }
+
+    // Check for urgent leads (10+ minutes in queue)
+    const urgentLeads = queuedLeads.filter((lead) => {
+      const waitTime = (now.getTime() - lead.createdAt.getTime()) / 1000 / 60;
+      return waitTime >= 10;
+    });
+
+    if (urgentLeads.length > 0) {
+      for (const lead of urgentLeads) {
+        const waitTime = Math.floor((now.getTime() - lead.createdAt.getTime()) / 1000 / 60);
+
+        const notifyPromises = adminIds.map((adminId) =>
+          this.notificationsService.create(
+            adminId,
+            '🔴 Lead Urgente en Cola',
+            `${lead.clientName || 'Un cliente'} esperando ${waitTime} minutos`,
+            NotificationType.LEAD_URGENT,
+            {
+              leadId: lead._id.toString(),
+              clientName: lead.clientName,
+              waitTime,
+            },
+          ),
+        );
+
+        await Promise.all(notifyPromises);
+      }
+
+      this.logger.log(`Urgent alerts sent for ${urgentLeads.length} lead(s)`);
+    }
   }
 }

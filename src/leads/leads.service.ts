@@ -61,6 +61,11 @@ export class LeadsService {
 
     const savedLead = await lead.save();
 
+    // Notify all admins about new lead (async, no await to not block)
+    this.leadAssignmentService
+      .notifyAdminsNewLead(savedLead, product.name)
+      .catch((err) => console.error('Error notifying admins about new lead:', err));
+
     // Try to assign to available vendedor (async)
     this.leadAssignmentService
       .assignLeadToVendedor(savedLead._id.toString())

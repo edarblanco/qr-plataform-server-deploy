@@ -120,4 +120,24 @@ export class NotificationsResolver {
     const userId = context.req.user._id.toString();
     return this.notificationsService.delete(id, userId);
   }
+
+  /**
+   * Enviar notificación de prueba (para testing)
+   */
+  @Mutation(() => Boolean, { name: 'sendTestNotification' })
+  async sendTestNotification(@Context() context: any): Promise<boolean> {
+    const userId = context.req.user._id.toString();
+
+    await this.pushService.sendToUser(userId, {
+      title: '🧪 Notificación de Prueba',
+      body: `Esta es una notificación de prueba enviada a las ${new Date().toLocaleTimeString('es-ES')}`,
+      type: 'SYSTEM_ALERT',
+      data: {
+        timestamp: new Date().toISOString(),
+        test: true,
+      },
+    });
+
+    return true;
+  }
 }

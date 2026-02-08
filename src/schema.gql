@@ -221,6 +221,7 @@ type Mutation {
   rejectQuotation(id: ID!): Quotation!
   rollbackProduct(logId: ID!): Product!
   sendQuotation(id: ID!): Quotation!
+  sendTestNotification: Boolean!
   startWorkingOnLead(id: ID!): Lead!
   subscribeToPush(subscription: PushSubscriptionInput!): Boolean!
   toggleUserStatus(id: ID!): User!

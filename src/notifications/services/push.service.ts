@@ -129,16 +129,25 @@ export class PushService implements OnModuleInit {
     const subscriptions = await this.getUserSubscriptions(userId);
 
     if (subscriptions.length === 0) {
-      console.log(`No active subscriptions for user ${userId}`);
+      console.log(`[Push] No active subscriptions for user ${userId}`);
       return;
     }
+
+    console.log(
+      `[Push] Sending notification to user ${userId} (${subscriptions.length} subscription(s))`,
+    );
+    console.log(`[Push] Payload:`, JSON.stringify(payload, null, 2));
 
     const payloadString = JSON.stringify(payload);
 
     // Enviar a todas las suscripciones del usuario
     const sendPromises = subscriptions.map(async (subscription) => {
+      const endpointPreview = subscription.endpoint.substring(0, 60) + '...';
+
       try {
-        await webpush.sendNotification(
+        console.log(`[Push] Sending to ${endpointPreview}`);
+
+        const result = await webpush.sendNotification(
           {
             endpoint: subscription.endpoint,
             keys: {
@@ -149,15 +158,32 @@ export class PushService implements OnModuleInit {
           payloadString,
         );
 
+        console.log(
+          `[Push] ✅ Notification sent successfully (status: ${result.statusCode})`,
+        );
+
         // Actualizar lastUsedAt
         subscription.lastUsedAt = new Date();
         await subscription.save();
       } catch (error: unknown) {
-        console.error(`Error sending push to ${subscription.endpoint}:`, error);
-
-        // Si el endpoint ya no es válido (410 Gone), desactivar la suscripción
         const statusCode = (error as { statusCode?: number }).statusCode;
+        const errorMessage =
+          (error as { message?: string }).message || 'Unknown error';
+        const errorBody = (error as { body?: string }).body;
+
+        console.error(
+          `[Push] ❌ Error sending to ${endpointPreview}:`,
+          {
+            statusCode,
+            message: errorMessage,
+            body: errorBody,
+            fullError: error,
+          },
+        );
+
+        // Si el endpoint ya no es válido (410 Gone o 404), desactivar la suscripción
         if (statusCode === 410 || statusCode === 404) {
+          console.log(`[Push] Marking subscription as inactive (status: ${statusCode})`);
           subscription.isActive = false;
           await subscription.save();
         }
@@ -165,6 +191,7 @@ export class PushService implements OnModuleInit {
     });
 
     await Promise.all(sendPromises);
+    console.log(`[Push] Finished sending notifications to user ${userId}`);
   }
 
   /**
