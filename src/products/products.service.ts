@@ -6,6 +6,7 @@ import { Product } from './schemas/product.schema';
 import { CreateProductInput } from './dto/create-product.input';
 import { UpdateProductInput } from './dto/update-product.input';
 import { QrService } from '../qr/qr.service';
+import { PdfService } from '../pdf/pdf.service';
 
 @Injectable()
 export class ProductsService {
@@ -13,15 +14,13 @@ export class ProductsService {
     @InjectModel(Product.name) private productModel: Model<Product>,
     private readonly qrService: QrService,
     private readonly configService: ConfigService,
+    private readonly pdfService: PdfService,
   ) {}
 
-  async findAll(skip = 0, limit = 50): Promise<Product[]> {
-    return this.productModel
-      .find()
-      .sort({ name: 1 })
-      .skip(skip)
-      .limit(limit)
-      .exec();
+  async findAll(skip = 0, limit?: number): Promise<Product[]> {
+    const query = this.productModel.find().sort({ name: 1 }).skip(skip);
+    if (limit != null && limit > 0) query.limit(limit);
+    return query.exec();
   }
 
   async findOne(id: string): Promise<Product> {
@@ -91,5 +90,54 @@ export class ProductsService {
 
     product.qrCode = qrCode;
     return product.save();
+  }
+
+  async regenerateAllQRs(): Promise<number> {
+    const frontendUrl =
+      this.configService.get('BASE_URL') || 'http://localhost:5173';
+
+    const products = await this.productModel.find().exec();
+    const BATCH = 20;
+    let count = 0;
+
+    for (let i = 0; i < products.length; i += BATCH) {
+      const batch = products.slice(i, i + BATCH);
+      await Promise.all(
+        batch.map(async (product) => {
+          const qrUrl = `${frontendUrl}/product/${product._id}`;
+          product.qrCode = await this.qrService.generateQR(qrUrl);
+          await product.save();
+          count++;
+        }),
+      );
+    }
+
+    return count;
+  }
+
+  async generateQrLabelsPdf(labelContent: string): Promise<string> {
+    const products = await this.findAll();
+
+    const isOnly = labelContent === 'qr-only';
+    const isSku  = labelContent === 'qr-name-sku';
+
+    const data = {
+      products: products.map((p) => ({
+        name: p.name,
+        sku:  p.sku,
+        qrCode: p.qrCode ?? null,
+      })),
+      showNameTop:    labelContent === 'qr-name-top',
+      showNameBottom: labelContent === 'qr-name-bottom' || isSku,
+      showSku:        isSku,
+      qrSize:         isOnly ? '1.3in' : isSku ? '0.92in' : '1.08in',
+      nameFontSize:   isSku ? '5.5pt' : '6pt',
+    };
+
+    return this.pdfService.generatePdf('qr-labels.hbs', data, {
+      preferCSSPageSize: true,
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
+      waitUntil: 'load',
+    });
   }
 }

@@ -78,4 +78,21 @@ export class ProductsResolver {
   ): Promise<Product> {
     return this.productsService.regenerateQR(id);
   }
+
+  @Mutation(() => Int)
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_UPDATE)
+  async regenerateAllQRs(): Promise<number> {
+    return this.productsService.regenerateAllQRs();
+  }
+
+  @Query(() => String, { name: 'qrLabelsPdf' })
+  @UseGuards(GqlAuthGuard, PermissionsGuard)
+  @Permissions(Permission.PRODUCTS_READ)
+  async qrLabelsPdf(
+    @Args('labelContent', { type: () => String, defaultValue: 'qr-name-bottom' })
+    labelContent: string,
+  ): Promise<string> {
+    return this.productsService.generateQrLabelsPdf(labelContent);
+  }
 }

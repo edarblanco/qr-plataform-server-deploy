@@ -215,6 +215,7 @@ type Mutation {
   markNotificationAsRead(id: ID!): Notification
   processLeadQueue: Boolean!
   reassignLead(id: ID!, newVendedorId: ID): Boolean!
+  regenerateAllQRs: Int!
   regenerateQR(id: ID!): Product!
   register(input: RegisterInput!): AuthPayload!
   rejectLead(id: ID!): Lead!
@@ -323,6 +324,7 @@ type Query {
   productConversionAnalytics(endDate: DateTime, limit: Int! = 20, startDate: DateTime): ProductConversionAnalytics!
   products(limit: Int, skip: Int): [Product!]!
   productsCount: Int!
+  qrLabelsPdf(labelContent: String! = "qr-name-bottom"): String!
   queueStats: QueueStats!
   quotation(id: ID!): Quotation
   quotationPdf(id: ID!): String!
