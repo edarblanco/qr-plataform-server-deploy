@@ -25,6 +25,7 @@ import { EmailModule } from './email/email.module';
 import { SquareModule } from './square/square.module';
 import { PdfModule } from './pdf/pdf.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PubSubModule } from './pubsub/pubsub.module';
 
 @Module({
   imports: [
@@ -63,7 +64,10 @@ import { NotificationsModule } from './notifications/notifications.module';
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
       playground: true,
-      context: ({ req }) => ({ req }),
+      subscriptions: {
+        'graphql-ws': true,
+      },
+      context: ({ req, extra }) => ({ req: req || extra?.request }),
     }),
 
     // MongoDB Module
@@ -74,6 +78,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     }),
 
     // Feature Modules
+    PubSubModule,
     AuthModule,
     UsersModule,
     ProductsModule,

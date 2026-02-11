@@ -29,7 +29,7 @@ async function bootstrap() {
     password: 'Admin123!',
     name: 'Administrador',
     role: Role.ADMIN,
-    availability: UserAvailability.AVAILABLE,
+    availability: UserAvailability.available,
   };
 
   try {

@@ -35,7 +35,7 @@ export class LeadAssignmentService {
     const availableVendedores = await this.userModel
       .find({
         role: Role.VENDEDOR,
-        availability: UserAvailability.AVAILABLE,
+        availability: UserAvailability.available,
       })
       .exec();
 

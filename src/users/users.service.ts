@@ -1,7 +1,9 @@
-import { Injectable, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, ForbiddenException, Inject, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import { PubSub } from 'graphql-subscriptions';
 import { User, UserAvailability } from './schemas/user.schema';
 import { Role } from '../auth/enums/role.enum';
 import { CreateUserInput } from './dto/create-user.input';
@@ -9,10 +11,18 @@ import { UpdateUserInput } from './dto/update-user.input';
 import { UpdateUserRoleInput } from './dto/update-user-role.input';
 import { UpdateAvailabilityInput } from './dto/update-availability.input';
 import { UserStats } from './entities/user-stats.entity';
+import { PUB_SUB } from '../pubsub/pubsub.provider';
+
+export const USER_AVAILABILITY_CHANGED = 'userAvailabilityChanged';
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  private readonly logger = new Logger(UsersService.name);
+
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    @Inject(PUB_SUB) private pubSub: PubSub,
+  ) {}
 
   async create(createUserInput: CreateUserInput): Promise<User> {
     const { email, password, name, role } = createUserInput;
@@ -120,13 +130,50 @@ export class UsersService {
   async updateAvailability(userId: string, input: UpdateAvailabilityInput): Promise<User> {
       const user = await this.findOne(userId);
       user.availability = input.availability;
-      return user.save();
+      user.lastSeen = new Date();
+      const saved = await user.save();
+      this.pubSub.publish(USER_AVAILABILITY_CHANGED, {
+        userAvailabilityChanged: {
+          id: saved._id.toString(),
+          name: saved.name,
+          availability: saved.availability,
+        },
+      });
+      return saved;
+  }
+
+  async updateHeartbeat(userId: string): Promise<boolean> {
+    await this.userModel.updateOne({ _id: userId }, { lastSeen: new Date() }).exec();
+    return true;
+  }
+
+  // Runs every 5 minutes: marks users offline if no heartbeat in the last 10 minutes
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async markStaleUsersOffline(): Promise<void> {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const staleUsers = await this.userModel.find({
+      availability: { $ne: UserAvailability.offline },
+      lastSeen: { $lt: tenMinutesAgo },
+    }).exec();
+
+    for (const user of staleUsers) {
+      user.availability = UserAvailability.offline;
+      const saved = await user.save();
+      this.logger.log(`[Heartbeat] Marked ${saved.name} as offline (stale)`);
+      this.pubSub.publish(USER_AVAILABILITY_CHANGED, {
+        userAvailabilityChanged: {
+          id: saved._id.toString(),
+          name: saved.name,
+          availability: saved.availability,
+        },
+      });
+    }
   }
 
   async getAvailableVendedores(): Promise<User[]> {
       return this.userModel.find({ 
           role: Role.VENDEDOR, 
-          availability: UserAvailability.AVAILABLE,
+          availability: UserAvailability.available,
           isActive: true
       }).exec();
   }

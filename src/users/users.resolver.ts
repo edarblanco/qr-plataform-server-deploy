@@ -1,6 +1,8 @@
-import { Resolver, Query, Mutation, Args, ID, Context } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { Resolver, Query, Mutation, Args, ID, Context, Subscription } from '@nestjs/graphql';
+import { Inject, UseGuards } from '@nestjs/common';
+import { PubSub } from 'graphql-subscriptions';
 import { UsersService } from './users.service';
+import { USER_AVAILABILITY_CHANGED } from './users.service';
 import { User } from './entities/user.entity';
 import { UserStats } from './entities/user-stats.entity';
 import { UpdateUserRoleInput } from './dto/update-user-role.input';
@@ -11,10 +13,14 @@ import { GqlAuthGuard } from '../auth/guards/gql-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/enums/permission.enum';
+import { PUB_SUB } from '../pubsub/pubsub.provider';
 
 @Resolver(() => User)
 export class UsersResolver {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    @Inject(PUB_SUB) private pubSub: PubSub,
+  ) {}
 
   @Query(() => [User], { name: 'users' })
   @UseGuards(GqlAuthGuard, PermissionsGuard)
@@ -145,6 +151,18 @@ export class UsersResolver {
   ): Promise<boolean> {
     const requestingUserId = context.req.user._id.toString();
     return this.usersService.deleteUser(id, requestingUserId);
+  }
+
+  @Subscription(() => User, { name: 'userAvailabilityChanged' })
+  userAvailabilityChanged() {
+    return this.pubSub.asyncIterableIterator(USER_AVAILABILITY_CHANGED);
+  }
+
+  @Mutation(() => Boolean)
+  @UseGuards(GqlAuthGuard)
+  async heartbeat(@Context() context): Promise<boolean> {
+    const userId = context.req.user._id.toString();
+    return this.usersService.updateHeartbeat(userId);
   }
 
   @Mutation(() => User)

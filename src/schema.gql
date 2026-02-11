@@ -208,6 +208,7 @@ type Mutation {
   deleteProduct(id: ID!): Boolean!
   deleteQuotation(id: ID!): Boolean!
   deleteUser(id: ID!): Boolean!
+  heartbeat: Boolean!
   importCSV(csvContent: String!): [Product!]!
   importProductsFromSquare: [Product!]!
   login(input: LoginInput!): AuthPayload!
@@ -438,6 +439,10 @@ type StatusDistributionAnalytics {
   quotationStatuses: [StatusDistribution!]!
 }
 
+type Subscription {
+  userAvailabilityChanged: User!
+}
+
 type TimeSeriesDataPoint {
   acceptedQuotations: Int!
   completedLeads: Int!
@@ -513,9 +518,9 @@ type User {
 
 """Availability status of a user (vendedor)"""
 enum UserAvailability {
-  AVAILABLE
-  BUSY
-  OFFLINE
+  available
+  busy
+  offline
 }
 
 type UserStats {
