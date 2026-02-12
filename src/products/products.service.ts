@@ -115,8 +115,16 @@ export class ProductsService {
     return count;
   }
 
-  async generateQrLabelsPdf(labelContent: string): Promise<string> {
-    const products = await this.findAll();
+  async generateQrLabelsPdf(labelContent: string, ids?: string[]): Promise<string> {
+    let products: Product[];
+
+    if (ids && ids.length > 0) {
+      // Filter by provided IDs
+      products = await this.productModel.find({ _id: { $in: ids } }).sort({ name: 1 }).exec();
+    } else {
+      // Default: fetch all
+      products = await this.findAll();
+    }
 
     const isOnly = labelContent === 'qr-only';
     const isSku  = labelContent === 'qr-name-sku';

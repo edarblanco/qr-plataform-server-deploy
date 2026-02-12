@@ -92,7 +92,8 @@ export class ProductsResolver {
   async qrLabelsPdf(
     @Args('labelContent', { type: () => String, defaultValue: 'qr-name-bottom' })
     labelContent: string,
+    @Args('ids', { type: () => [ID], nullable: true }) ids?: string[],
   ): Promise<string> {
-    return this.productsService.generateQrLabelsPdf(labelContent);
+    return this.productsService.generateQrLabelsPdf(labelContent, ids);
   }
 }
