@@ -9,16 +9,52 @@ registerEnumType(LeadStatus, {
   description: 'Status of a lead',
 });
 
+/**
+ * GraphQL ObjectType para items individuales del lead
+ */
+@ObjectType()
+export class LeadItem {
+  @Field()
+  productId: string;
+
+  @Field()
+  productName: string;
+
+  @Field()
+  productSku: string;
+
+  @Field({ nullable: true })
+  productBrand?: string;
+
+  @Field()
+  productPrice: number;
+
+  @Field({ nullable: true })
+  notes?: string;
+
+  @Field()
+  addedAt: Date;
+}
+
 @ObjectType()
 export class Lead {
   @Field(() => ID)
   id: string;
 
-  @Field()
-  productId: string;
+  // DEPRECATED - mantener por compatibilidad
+  @Field({ nullable: true })
+  productId?: string;
 
   @Field(() => Product, { nullable: true })
   product?: Product;
+
+  // NUEVO - Array de productos del carrito
+  @Field(() => [LeadItem])
+  items: LeadItem[];
+
+  // NUEVO - Descripción del lead
+  @Field({ nullable: true })
+  description?: string;
 
   @Field(() => ID, { nullable: true })
   customerId?: string;

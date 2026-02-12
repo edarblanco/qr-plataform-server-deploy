@@ -34,6 +34,7 @@ export class UsersResolver {
       role: user.role,
       availability: user.availability,
       isActive: user.isActive,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     }));
   }
@@ -54,6 +55,7 @@ export class UsersResolver {
       role: user.role,
       availability: user.availability,
       isActive: user.isActive,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     };
   }
@@ -73,6 +75,7 @@ export class UsersResolver {
       role: user.role,
       availability: user.availability,
       isActive: user.isActive,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     };
   }
@@ -93,6 +96,7 @@ export class UsersResolver {
       role: user.role,
       availability: user.availability,
       isActive: user.isActive,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     };
   }
@@ -110,6 +114,7 @@ export class UsersResolver {
       role: user.role,
       availability: user.availability,
       isActive: user.isActive,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     };
   }
@@ -138,6 +143,7 @@ export class UsersResolver {
       role: user.role,
       availability: user.availability,
       isActive: user.isActive,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     };
   }
@@ -180,6 +186,7 @@ export class UsersResolver {
       role: user.role,
       availability: user.availability,
       isActive: user.isActive,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     };
   }
@@ -196,6 +203,7 @@ export class UsersResolver {
       role: user.role,
       availability: user.availability,
       isActive: user.isActive,
+      lastSeen: user.lastSeen,
       createdAt: user.createdAt,
     }));
   }

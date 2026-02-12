@@ -19,11 +19,7 @@ export class LeadsService {
     private readonly leadAssignmentService: LeadAssignmentService,
   ) {}
 
-  async findAll(
-    status?: LeadStatus,
-    skip = 0,
-    limit = 50,
-  ): Promise<Lead[]> {
+  async findAll(status?: LeadStatus, skip = 0, limit = 50): Promise<Lead[]> {
     const query = status ? { status } : {};
     return this.leadModel
       .find(query)
@@ -42,8 +38,60 @@ export class LeadsService {
   }
 
   async create(input: CreateLeadInput): Promise<Lead> {
-    // Verify product exists
-    const product = await this.productsService.findOne(input.productId);
+    // Validar que tenga al menos un producto (nuevo formato o legacy)
+    if (!input.productId && (!input.items || input.items.length === 0)) {
+      throw new NotFoundException(
+        'Debe proporcionar al menos un producto (productId o items)',
+      );
+    }
+
+    let productForNotification: any;
+    let description = input.description;
+
+    // Modo legacy: un solo producto (compatibilidad retroactiva)
+    if (input.productId && !input.items) {
+      const product = await this.productsService.findOne(input.productId);
+      productForNotification = product;
+
+      // Convertir a nuevo formato internamente
+      input.items = [
+        {
+          productId: input.productId,
+          productName: product.name,
+          productSku: product.sku,
+          productBrand: product.brand,
+          productPrice: product.price,
+        },
+      ];
+
+      description = `Cotización: ${product.name}`;
+    } else if (input.items && input.items.length > 0) {
+      // Modo nuevo: múltiples productos del carrito
+      // Validar que todos los productos existan
+      for (const item of input.items) {
+        await this.productsService.findOne(item.productId);
+      }
+
+      // Preparar información para notificaciones
+      const totalValue = input.items.reduce(
+        (sum, i) => sum + i.productPrice,
+        0,
+      );
+      productForNotification = {
+        name: `${input.items.length} producto(s)`,
+        sku: input.items.map((i) => i.productSku).join(', '),
+        brand: '',
+        price: totalValue,
+      };
+
+      if (!description) {
+        if (input.items.length === 1) {
+          description = `Cotización: ${input.items[0].productName}`;
+        } else {
+          description = `Cotización de ${input.items.length} productos`;
+        }
+      }
+    }
 
     // Find or create customer
     const customer = await this.customersService.findOrCreate(
@@ -54,6 +102,7 @@ export class LeadsService {
 
     const lead = new this.leadModel({
       ...input,
+      description,
       customerId: customer._id.toString(),
       status: LeadStatus.PENDING,
       priority: 0, // Default priority
@@ -63,8 +112,10 @@ export class LeadsService {
 
     // Notify all admins about new lead (async, no await to not block)
     this.leadAssignmentService
-      .notifyAdminsNewLead(savedLead, product.name)
-      .catch((err) => console.error('Error notifying admins about new lead:', err));
+      .notifyAdminsNewLead(savedLead, productForNotification.name)
+      .catch((err) =>
+        console.error('Error notifying admins about new lead:', err),
+      );
 
     // Try to assign to available vendedor (async)
     this.leadAssignmentService
@@ -80,12 +131,7 @@ export class LeadsService {
           clientPhone: savedLead.clientPhone,
           message: savedLead.message,
         },
-        {
-          name: product.name,
-          sku: product.sku,
-          brand: product.brand,
-          price: product.price,
-        },
+        productForNotification,
       )
       .catch((err) => console.error('Error sending lead notification:', err));
 
@@ -164,8 +210,13 @@ export class LeadsService {
       throw new NotFoundException('Lead no asignado a este vendedor');
     }
 
-    if (lead.status !== LeadStatus.ASSIGNED && lead.status !== LeadStatus.IN_PROGRESS) {
-      throw new NotFoundException('Lead debe estar en estado ASSIGNED o IN_PROGRESS');
+    if (
+      lead.status !== LeadStatus.ASSIGNED &&
+      lead.status !== LeadStatus.IN_PROGRESS
+    ) {
+      throw new NotFoundException(
+        'Lead debe estar en estado ASSIGNED o IN_PROGRESS',
+      );
     }
 
     lead.status = LeadStatus.REJECTED;

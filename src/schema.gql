@@ -57,8 +57,19 @@ input CreateLeadInput {
   clientEmail: String!
   clientName: String!
   clientPhone: String
+  description: String
+  items: [CreateLeadItemInput!]
   message: String
+  productId: String
+}
+
+input CreateLeadItemInput {
+  notes: String
+  productBrand: String
   productId: String!
+  productName: String!
+  productPrice: Float!
+  productSku: String!
 }
 
 input CreateNoteInput {
@@ -160,14 +171,26 @@ type Lead {
   clientPhone: String
   createdAt: DateTime!
   customerId: ID
+  description: String
   id: ID!
+  items: [LeadItem!]!
   message: String
   priority: Float!
   product: Product
-  productId: String!
+  productId: String
   queuePosition: Float
   status: LeadStatus!
   updatedAt: DateTime!
+}
+
+type LeadItem {
+  addedAt: DateTime!
+  notes: String
+  productBrand: String
+  productId: String!
+  productName: String!
+  productPrice: Float!
+  productSku: String!
 }
 
 """Status of a lead"""
@@ -512,6 +535,7 @@ type User {
   email: String!
   id: ID!
   isActive: Boolean!
+  lastSeen: DateTime
   name: String!
   role: String!
 }

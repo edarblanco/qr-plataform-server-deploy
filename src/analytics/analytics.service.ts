@@ -50,11 +50,30 @@ export class AnalyticsService {
     const conversionRate =
       totalLeads > 0 ? (closedLeads / totalLeads) * 100 : 0;
 
-    // Top 5 most requested products
+    // Top 5 most requested products (handles both legacy productId and cart items)
     const topProductsAggregation = await this.leadModel
       .aggregate([
         { $match: query },
-        { $group: { _id: '$productId', count: { $sum: 1 } } },
+        // Normalize: extract product refs from both legacy productId and items array
+        {
+          $addFields: {
+            _productRefs: {
+              $cond: {
+                if: { $and: [{ $isArray: '$items' }, { $gt: [{ $size: '$items' }, 0] }] },
+                then: '$items.productId',
+                else: {
+                  $cond: {
+                    if: { $ne: ['$productId', null] },
+                    then: ['$productId'],
+                    else: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        { $unwind: '$_productRefs' },
+        { $group: { _id: '$_productRefs', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 5 },
         {
@@ -302,13 +321,32 @@ export class AnalyticsService {
         ? { createdAt: { $gte: startDate, $lte: endDate } }
         : {};
 
-    // Agregación compleja: Leads + Quotations por producto
+    // Agregación compleja: Leads + Quotations por producto (handles legacy and cart items)
     const productStats = await this.leadModel
       .aggregate([
         { $match: dateQuery },
+        // Normalize product refs from both legacy productId and cart items
+        {
+          $addFields: {
+            _productRefs: {
+              $cond: {
+                if: { $and: [{ $isArray: '$items' }, { $gt: [{ $size: '$items' }, 0] }] },
+                then: '$items.productId',
+                else: {
+                  $cond: {
+                    if: { $ne: ['$productId', null] },
+                    then: ['$productId'],
+                    else: [],
+                  },
+                },
+              },
+            },
+          },
+        },
+        { $unwind: '$_productRefs' },
         {
           $group: {
-            _id: '$productId',
+            _id: '$_productRefs',
             totalLeads: { $sum: 1 },
             completedLeads: {
               $sum: { $cond: [{ $eq: ['$status', LeadStatus.COMPLETED] }, 1, 0] },

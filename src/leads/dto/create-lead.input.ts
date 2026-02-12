@@ -1,11 +1,35 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsEmail, IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsMongoId,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateLeadItemInput } from './create-lead-item.input';
 
 @InputType()
 export class CreateLeadInput {
-  @Field()
-  @IsNotEmpty()
-  productId: string;
+  // DEPRECATED - mantener por compatibilidad con formato antiguo
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsMongoId({ message: 'productId debe ser un ID de MongoDB válido' })
+  productId?: string;
+
+  // NUEVO - Array de productos del carrito
+  @Field(() => [CreateLeadItemInput], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateLeadItemInput)
+  items?: CreateLeadItemInput[];
+
+  // NUEVO - Descripción del lead
+  @Field({ nullable: true })
+  @IsOptional()
+  description?: string;
 
   @Field()
   @IsNotEmpty()

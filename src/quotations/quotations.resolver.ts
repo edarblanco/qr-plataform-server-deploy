@@ -129,6 +129,7 @@ export class QuotationsResolver {
     return {
       id: lead._id.toString(),
       productId: lead.productId,
+      items: lead.items || [],
       customerId: lead.customerId,
       clientName: lead.clientName,
       clientEmail: lead.clientEmail,

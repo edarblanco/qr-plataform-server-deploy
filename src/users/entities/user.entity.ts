@@ -27,6 +27,9 @@ export class User {
   @Field()
   isActive: boolean;
 
+  @Field({ nullable: true })
+  lastSeen?: Date;
+
   @Field()
   createdAt: Date;
 }

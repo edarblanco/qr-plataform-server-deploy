@@ -240,16 +240,21 @@ export class LeadAssignmentService {
    * Send notification when lead is assigned
    */
   private async sendLeadAssignedNotification(vendedorId: string, lead: Lead): Promise<void> {
-    // Create notification in database (push is sent automatically)
+    const itemsCount = lead.items?.length || 0;
+    const description = itemsCount > 1
+      ? `Se te ha asignado un lead con ${itemsCount} productos de ${lead.clientName || 'un cliente'}`
+      : `Se te ha asignado un nuevo lead de ${lead.clientName || 'un cliente'}`;
+
     await this.notificationsService.create(
       vendedorId,
       'Nuevo Lead Asignado',
-      `Se te ha asignado un nuevo lead de ${lead.clientName || 'un cliente'}`,
+      description,
       NotificationType.LEAD_ASSIGNED,
       {
         leadId: lead._id.toString(),
         clientName: lead.clientName,
-        productId: lead.productId,
+        productId: lead.productId || null,
+        itemsCount,
       },
     );
   }
@@ -278,6 +283,7 @@ export class LeadAssignmentService {
     }
 
     const productInfo = productName ? ` - ${productName}` : '';
+    const itemsCount = lead.items?.length || 0;
 
     // Send notification to each admin
     const notifyPromises = adminIds.map((adminId) =>
@@ -290,7 +296,8 @@ export class LeadAssignmentService {
           leadId: lead._id.toString(),
           clientName: lead.clientName,
           clientEmail: lead.clientEmail,
-          productId: lead.productId,
+          productId: lead.productId || null,
+          itemsCount,
         },
       ),
     );

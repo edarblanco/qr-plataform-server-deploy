@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
+import { LeadItem, LeadItemSchema } from './lead-item.schema';
 
 export enum LeadStatus {
   PENDING = 'pending',
@@ -13,19 +14,28 @@ export enum LeadStatus {
   timestamps: true,
   toJSON: {
     virtuals: true,
-    transform: function(_doc: any, ret: any) {
+    transform: function (_doc: any, ret: any) {
       ret.id = ret._id.toString();
       delete ret._id;
       delete ret.__v;
       return ret;
-    }
-  }
+    },
+  },
 })
 export class Lead extends Document {
   id: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Product', required: true })
-  productId: string;
+  // DEPRECATED - mantener por compatibilidad con leads antiguos
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Product', default: null })
+  productId?: string;
+
+  // NUEVO - Array de productos en el carrito
+  @Prop({ type: [LeadItemSchema], default: [] })
+  items: LeadItem[];
+
+  // NUEVO - Descripción general del lead (ej: "Cotización de 3 productos")
+  @Prop()
+  description?: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Customer', default: null })
   customerId: string;
@@ -67,7 +77,7 @@ export class Lead extends Document {
 export const LeadSchema = SchemaFactory.createForClass(Lead);
 
 // Add virtual 'id' field that maps to '_id'
-LeadSchema.virtual('id').get(function() {
+LeadSchema.virtual('id').get(function () {
   return this._id.toHexString();
 });
 

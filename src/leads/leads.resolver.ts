@@ -154,8 +154,9 @@ export class LeadsResolver {
   }
 
   // Field resolver to load related product
-  @ResolveField(() => Product)
-  async product(@Parent() lead: Lead): Promise<Product> {
+  @ResolveField(() => Product, { nullable: true })
+  async product(@Parent() lead: Lead): Promise<Product | null> {
+    if (!lead.productId) return null;
     const product = await this.productsService.findOne(lead.productId);
     return {
       id: product._id.toString(),
