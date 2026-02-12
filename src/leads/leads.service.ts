@@ -130,6 +130,7 @@ export class LeadsService {
           clientEmail: savedLead.clientEmail,
           clientPhone: savedLead.clientPhone,
           message: savedLead.message,
+          items: savedLead.items,
         },
         productForNotification,
       )
