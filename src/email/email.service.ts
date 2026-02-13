@@ -25,8 +25,8 @@ export class EmailService {
   }
 
   private taxLabel(subtotal: number): string {
-    if (subtotal <= 5000) return 'Taxes (FL 6% + Miami-Dade 1%)';
-    return 'Taxes (FL 6% + Miami-Dade $50 cap)';
+    if (subtotal <= 5000) return 'Taxes 7%';
+    return 'Taxes 6%';
   }
 
   private buildProductsHtml(lead: any, product: any): string {
@@ -152,8 +152,12 @@ export class EmailService {
     `;
 
     try {
-      const emailFrom = this.configService.get('EMAIL_FROM') || this.configService.get('MAIL_USER');
-      const adminEmail = this.configService.get('ADMIN_EMAIL') || this.configService.get('MAIL_USER');
+      const emailFrom =
+        this.configService.get('EMAIL_FROM') ||
+        this.configService.get('MAIL_USER');
+      const adminEmail =
+        this.configService.get('ADMIN_EMAIL') ||
+        this.configService.get('MAIL_USER');
 
       await this.transporter.sendMail({
         from: emailFrom,
@@ -182,7 +186,9 @@ export class EmailService {
     `;
 
     try {
-      const emailFrom = this.configService.get('EMAIL_FROM') || this.configService.get('MAIL_USER');
+      const emailFrom =
+        this.configService.get('EMAIL_FROM') ||
+        this.configService.get('MAIL_USER');
 
       await this.transporter.sendMail({
         from: emailFrom,
