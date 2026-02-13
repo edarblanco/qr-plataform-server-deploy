@@ -2,9 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Lead, LeadStatus } from '../leads/schemas/lead.schema';
-import { Quotation, QuotationStatus } from '../quotations/schemas/quotation.schema';
+import {
+  Quotation,
+  QuotationStatus,
+} from '../quotations/schemas/quotation.schema';
 import { Product } from '../products/schemas/product.schema';
-import { Analytics, TopProduct, MonthlyGoals } from './entities/analytics.entity';
+import {
+  Analytics,
+  TopProduct,
+  MonthlyGoals,
+} from './entities/analytics.entity';
+import { ScanEvent } from './schemas/scan-event.schema';
+import { CartSession, CartStatus } from './schemas/cart-session.schema';
 import {
   AnalyticsComparison,
   PeriodMetrics,
@@ -15,6 +24,18 @@ import {
   StatusDistributionAnalytics,
   StatusDistribution,
 } from './entities/analytics-enhanced.entity';
+import { UserConversion } from './entities/user-conversion.entity';
+
+interface LeadDateQuery {
+  createdAt?: { $gte?: Date; $lte?: Date };
+}
+
+interface PeriodAggregation {
+  _id: string | number;
+  count: number;
+}
+
+type PeriodGranularity = Record<string, unknown>;
 
 @Injectable()
 export class AnalyticsService {
@@ -22,6 +43,8 @@ export class AnalyticsService {
     @InjectModel(Lead.name) private leadModel: Model<Lead>,
     @InjectModel(Quotation.name) private quotationModel: Model<Quotation>,
     @InjectModel(Product.name) private productModel: Model<Product>,
+    @InjectModel(ScanEvent.name) private scanEventModel: Model<ScanEvent>,
+    @InjectModel(CartSession.name) private cartSessionModel: Model<CartSession>,
   ) {}
 
   // ============================================
@@ -29,7 +52,7 @@ export class AnalyticsService {
   // ============================================
 
   async getAnalytics(startDate?: Date, endDate?: Date): Promise<Analytics> {
-    const query: any = {};
+    const query: LeadDateQuery = {};
 
     // Filter by date range if provided
     if (startDate || endDate) {
@@ -59,7 +82,12 @@ export class AnalyticsService {
           $addFields: {
             _productRefs: {
               $cond: {
-                if: { $and: [{ $isArray: '$items' }, { $gt: [{ $size: '$items' }, 0] }] },
+                if: {
+                  $and: [
+                    { $isArray: '$items' },
+                    { $gt: [{ $size: '$items' }, 0] },
+                  ],
+                },
                 then: '$items.productId',
                 else: {
                   $cond: {
@@ -104,47 +132,53 @@ export class AnalyticsService {
     }));
 
     // MEJORADO: Average response time (ahora es real, no hardcoded)
-    const responseTimeAgg = await this.leadModel.aggregate([
-      {
-        $match: {
-          ...query,
-          assignedAt: { $ne: null },
-        },
-      },
-      {
-        $project: {
-          responseTime: {
-            $divide: [{ $subtract: ['$assignedAt', '$createdAt'] }, 3600000], // ms to hours
+    const responseTimeAgg = await this.leadModel
+      .aggregate([
+        {
+          $match: {
+            ...query,
+            assignedAt: { $ne: null },
           },
         },
-      },
-      { $group: { _id: null, avgResponseTime: { $avg: '$responseTime' } } },
-    ]).exec();
+        {
+          $project: {
+            responseTime: {
+              $divide: [{ $subtract: ['$assignedAt', '$createdAt'] }, 3600000], // ms to hours
+            },
+          },
+        },
+        { $group: { _id: null, avgResponseTime: { $avg: '$responseTime' } } },
+      ])
+      .exec();
 
     const averageResponseTime = responseTimeAgg[0]?.avgResponseTime || 0;
 
     // NUEVO: Average ticket y total revenue de quotations aceptadas
-    const acceptedQuotationsAgg = await this.quotationModel.aggregate([
-      {
-        $match: {
-          status: QuotationStatus.ACCEPTED,
-          ...(startDate || endDate ? {
-            acceptedAt: {
-              ...(startDate ? { $gte: startDate } : {}),
-              ...(endDate ? { $lte: endDate } : {}),
-            }
-          } : {}),
+    const acceptedQuotationsAgg = await this.quotationModel
+      .aggregate([
+        {
+          $match: {
+            status: QuotationStatus.ACCEPTED,
+            ...(startDate || endDate
+              ? {
+                  acceptedAt: {
+                    ...(startDate ? { $gte: startDate } : {}),
+                    ...(endDate ? { $lte: endDate } : {}),
+                  },
+                }
+              : {}),
+          },
         },
-      },
-      {
-        $group: {
-          _id: null,
-          avgTicket: { $avg: '$total' },
-          totalRevenue: { $sum: '$total' },
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: null,
+            avgTicket: { $avg: '$total' },
+            totalRevenue: { $sum: '$total' },
+            count: { $sum: 1 },
+          },
         },
-      },
-    ]).exec();
+      ])
+      .exec();
 
     const averageTicket = acceptedQuotationsAgg[0]?.avgTicket || 0;
     const totalRevenue = acceptedQuotationsAgg[0]?.totalRevenue || 0;
@@ -164,7 +198,7 @@ export class AnalyticsService {
       averageResponseTime,
       monthlyGoals,
       averageTicket, // NUEVO campo opcional
-      totalRevenue,  // NUEVO campo opcional
+      totalRevenue, // NUEVO campo opcional
     };
   }
 
@@ -237,7 +271,9 @@ export class AnalyticsService {
             _id: groupFormat,
             total: { $sum: 1 },
             completed: {
-              $sum: { $cond: [{ $eq: ['$status', LeadStatus.COMPLETED] }, 1, 0] },
+              $sum: {
+                $cond: [{ $eq: ['$status', LeadStatus.COMPLETED] }, 1, 0],
+              },
             },
           },
         },
@@ -259,11 +295,17 @@ export class AnalyticsService {
             _id: groupFormat,
             total: { $sum: 1 },
             accepted: {
-              $sum: { $cond: [{ $eq: ['$status', QuotationStatus.ACCEPTED] }, 1, 0] },
+              $sum: {
+                $cond: [{ $eq: ['$status', QuotationStatus.ACCEPTED] }, 1, 0],
+              },
             },
             revenue: {
               $sum: {
-                $cond: [{ $eq: ['$status', QuotationStatus.ACCEPTED] }, '$total', 0],
+                $cond: [
+                  { $eq: ['$status', QuotationStatus.ACCEPTED] },
+                  '$total',
+                  0,
+                ],
               },
             },
           },
@@ -330,7 +372,12 @@ export class AnalyticsService {
           $addFields: {
             _productRefs: {
               $cond: {
-                if: { $and: [{ $isArray: '$items' }, { $gt: [{ $size: '$items' }, 0] }] },
+                if: {
+                  $and: [
+                    { $isArray: '$items' },
+                    { $gt: [{ $size: '$items' }, 0] },
+                  ],
+                },
                 then: '$items.productId',
                 else: {
                   $cond: {
@@ -349,7 +396,9 @@ export class AnalyticsService {
             _id: '$_productRefs',
             totalLeads: { $sum: 1 },
             completedLeads: {
-              $sum: { $cond: [{ $eq: ['$status', LeadStatus.COMPLETED] }, 1, 0] },
+              $sum: {
+                $cond: [{ $eq: ['$status', LeadStatus.COMPLETED] }, 1, 0],
+              },
             },
           },
         },
@@ -369,7 +418,9 @@ export class AnalyticsService {
             pipeline: [
               {
                 $match: {
-                  status: { $in: [QuotationStatus.SENT, QuotationStatus.ACCEPTED] },
+                  status: {
+                    $in: [QuotationStatus.SENT, QuotationStatus.ACCEPTED],
+                  },
                   ...(startDate && endDate
                     ? { createdAt: { $gte: startDate, $lte: endDate } }
                     : {}),
@@ -387,7 +438,11 @@ export class AnalyticsService {
                   quotationsSent: { $sum: 1 },
                   quotationsAccepted: {
                     $sum: {
-                      $cond: [{ $eq: ['$status', QuotationStatus.ACCEPTED] }, 1, 0],
+                      $cond: [
+                        { $eq: ['$status', QuotationStatus.ACCEPTED] },
+                        1,
+                        0,
+                      ],
                     },
                   },
                   totalRevenue: {
@@ -413,13 +468,22 @@ export class AnalyticsService {
             totalLeads: 1,
             completedLeads: 1,
             quotationsSent: {
-              $ifNull: [{ $arrayElemAt: ['$quotationStats.quotationsSent', 0] }, 0],
+              $ifNull: [
+                { $arrayElemAt: ['$quotationStats.quotationsSent', 0] },
+                0,
+              ],
             },
             quotationsAccepted: {
-              $ifNull: [{ $arrayElemAt: ['$quotationStats.quotationsAccepted', 0] }, 0],
+              $ifNull: [
+                { $arrayElemAt: ['$quotationStats.quotationsAccepted', 0] },
+                0,
+              ],
             },
             totalRevenue: {
-              $ifNull: [{ $arrayElemAt: ['$quotationStats.totalRevenue', 0] }, 0],
+              $ifNull: [
+                { $arrayElemAt: ['$quotationStats.totalRevenue', 0] },
+                0,
+              ],
             },
           },
         },
@@ -428,7 +492,12 @@ export class AnalyticsService {
             leadConversionRate: {
               $cond: [
                 { $gt: ['$totalLeads', 0] },
-                { $multiply: [{ $divide: ['$completedLeads', '$totalLeads'] }, 100] },
+                {
+                  $multiply: [
+                    { $divide: ['$completedLeads', '$totalLeads'] },
+                    100,
+                  ],
+                },
                 0,
               ],
             },
@@ -436,7 +505,10 @@ export class AnalyticsService {
               $cond: [
                 { $gt: ['$quotationsSent', 0] },
                 {
-                  $multiply: [{ $divide: ['$quotationsAccepted', '$quotationsSent'] }, 100],
+                  $multiply: [
+                    { $divide: ['$quotationsAccepted', '$quotationsSent'] },
+                    100,
+                  ],
                 },
                 0,
               ],
@@ -508,7 +580,8 @@ export class AnalyticsService {
       (item) => ({
         status: item._id,
         count: item.count,
-        percentage: totalQuotations > 0 ? (item.count / totalQuotations) * 100 : 0,
+        percentage:
+          totalQuotations > 0 ? (item.count / totalQuotations) * 100 : 0,
       }),
     );
 
@@ -581,7 +654,10 @@ export class AnalyticsService {
           {
             $project: {
               responseTime: {
-                $divide: [{ $subtract: ['$assignedAt', '$createdAt'] }, 3600000],
+                $divide: [
+                  { $subtract: ['$assignedAt', '$createdAt'] },
+                  3600000,
+                ],
               },
             },
           },
@@ -593,7 +669,8 @@ export class AnalyticsService {
     const totalQuotationValue = quotationValueAgg[0]?.total || 0;
     const averageTicket =
       acceptedQuotations > 0 ? totalQuotationValue / acceptedQuotations : 0;
-    const conversionRate = totalLeads > 0 ? (completedLeads / totalLeads) * 100 : 0;
+    const conversionRate =
+      totalLeads > 0 ? (completedLeads / totalLeads) * 100 : 0;
     const acceptanceRate =
       totalQuotations > 0 ? (acceptedQuotations / totalQuotations) * 100 : 0;
     const averageResponseTime = responseTimeAgg[0]?.avgResponseTime || 0;
@@ -625,8 +702,8 @@ export class AnalyticsService {
 
   async getLeadsByPeriod(
     period: 'day' | 'week' | 'month' | 'year' = 'month',
-  ): Promise<any[]> {
-    const groupFormat: any = {
+  ): Promise<PeriodAggregation[]> {
+    const groupFormat: PeriodGranularity = {
       day: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
       week: { $week: '$createdAt' },
       month: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
@@ -642,6 +719,165 @@ export class AnalyticsService {
           },
         },
         { $sort: { _id: 1 } },
+      ])
+      .exec();
+  }
+
+  // ============================================
+  // NUEVOS MÉTODOS - TRACKING Y MÉTRICAS AVANZADAS
+  // ============================================
+
+  async trackScan(
+    productId: string,
+    source?: string,
+    userAgent?: string,
+    ip?: string,
+  ): Promise<boolean> {
+    try {
+      await this.scanEventModel.create({
+        productId,
+        source: source || 'direct',
+        userAgent,
+        ip,
+      });
+      return true;
+    } catch (error) {
+      console.error('Error tracking scan:', error);
+      return false;
+    }
+  }
+
+  async syncCart(
+    sessionId: string,
+    items: { productId: string; quantity: number; price: number }[],
+    totalValue: number,
+    userId?: string,
+  ): Promise<boolean> {
+    try {
+      await this.cartSessionModel.findOneAndUpdate(
+        { sessionId },
+        {
+          sessionId,
+          userId,
+          items,
+          totalValue,
+          status: CartStatus.ACTIVE,
+          lastInteraction: new Date(),
+        },
+        { upsert: true, new: true },
+      );
+      return true;
+    } catch (error) {
+      console.error('Error syncing cart:', error);
+      return false;
+    }
+  }
+
+  async getCartAbandonmentRate(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<number> {
+    const query =
+      startDate && endDate
+        ? { createdAt: { $gte: startDate, $lte: endDate } }
+        : {};
+
+    const totalCarts = await this.cartSessionModel.countDocuments(query).exec();
+    const abandonedCarts = await this.cartSessionModel
+      .countDocuments({
+        ...query,
+        status: CartStatus.ABANDONED,
+      })
+      .exec();
+
+    return totalCarts > 0 ? (abandonedCarts / totalCarts) * 100 : 0;
+  }
+
+  async getTopScannedProducts(limit: number = 5): Promise<TopProduct[]> {
+    const agg = await this.scanEventModel
+      .aggregate([
+        { $group: { _id: '$productId', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'products',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'product',
+          },
+        },
+        { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            productId: { $toString: '$_id' },
+            productName: { $ifNull: ['$product.name', 'Producto Desconocido'] },
+            requestCount: '$count',
+          },
+        },
+      ])
+      .exec();
+
+    return agg.map((item) => ({
+      productId: item.productId,
+      productName: item.productName,
+      requestCount: item.requestCount,
+    }));
+  }
+
+  async getLeadConversionByUser(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<UserConversion[]> {
+    const dateQuery =
+      startDate && endDate
+        ? { createdAt: { $gte: startDate, $lte: endDate } }
+        : {};
+
+    return await this.leadModel
+      .aggregate([
+        { $match: { ...dateQuery, assignedTo: { $ne: null } } },
+        {
+          $group: {
+            _id: '$assignedTo',
+            totalLeads: { $sum: 1 },
+            completedLeads: {
+              $sum: {
+                $cond: [{ $eq: ['$status', LeadStatus.COMPLETED] }, 1, 0],
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        { $unwind: '$user' },
+        {
+          $project: {
+            userId: { $toString: '$_id' },
+            userName: '$user.name',
+            totalLeads: 1,
+            completedLeads: 1,
+            conversionRate: {
+              $cond: [
+                { $gt: ['$totalLeads', 0] },
+                {
+                  $multiply: [
+                    { $divide: ['$completedLeads', '$totalLeads'] },
+                    100,
+                  ],
+                },
+                0,
+              ],
+            },
+          },
+        },
+        { $sort: { conversionRate: -1 } },
       ])
       .exec();
   }
