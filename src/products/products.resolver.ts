@@ -19,15 +19,18 @@ export class ProductsResolver {
   async findAll(
     @Args('skip', { type: () => Int, nullable: true }) skip?: number,
     @Args('limit', { type: () => Int, nullable: true }) limit?: number,
+    @Args('search', { type: () => String, nullable: true }) search?: string,
   ): Promise<Product[]> {
-    return this.productsService.findAll(skip, limit);
+    return this.productsService.findAll(skip, limit, search);
   }
 
   @Query(() => Int, { name: 'productsCount' })
   @UseGuards(GqlAuthGuard, PermissionsGuard)
   @Permissions(Permission.PRODUCTS_READ)
-  async count(): Promise<number> {
-    return this.productsService.count();
+  async count(
+    @Args('search', { type: () => String, nullable: true }) search?: string,
+  ): Promise<number> {
+    return this.productsService.count(search);
   }
 
   @Query(() => Product, { name: 'product', nullable: true })

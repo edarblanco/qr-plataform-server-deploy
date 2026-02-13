@@ -346,8 +346,8 @@ type Query {
   product(id: ID!): Product
   productBySku(sku: String!): Product
   productConversionAnalytics(endDate: DateTime, limit: Int! = 20, startDate: DateTime): ProductConversionAnalytics!
-  products(limit: Int, skip: Int): [Product!]!
-  productsCount: Int!
+  products(limit: Int, search: String, skip: Int): [Product!]!
+  productsCount(search: String): Int!
   qrLabelsPdf(ids: [ID!], labelContent: String! = "qr-name-bottom"): String!
   queueStats: QueueStats!
   quotation(id: ID!): Quotation

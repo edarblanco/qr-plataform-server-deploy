@@ -17,8 +17,9 @@ export class ProductsService {
     private readonly pdfService: PdfService,
   ) {}
 
-  async findAll(skip = 0, limit?: number): Promise<Product[]> {
-    const query = this.productModel.find().sort({ name: 1 }).skip(skip);
+  async findAll(skip = 0, limit?: number, search?: string): Promise<Product[]> {
+    const filter = this.buildSearchFilter(search);
+    const query = this.productModel.find(filter).sort({ name: 1 }).skip(skip);
     if (limit != null && limit > 0) query.limit(limit);
     return query.exec();
   }
@@ -75,8 +76,22 @@ export class ProductsService {
     return true;
   }
 
-  async count(): Promise<number> {
-    return this.productModel.countDocuments().exec();
+  async count(search?: string): Promise<number> {
+    const filter = this.buildSearchFilter(search);
+    return this.productModel.countDocuments(filter).exec();
+  }
+
+  private buildSearchFilter(search?: string): Record<string, any> {
+    if (!search || !search.trim()) return {};
+    const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return {
+      $or: [
+        { name: { $regex: escaped, $options: 'i' } },
+        { brand: { $regex: escaped, $options: 'i' } },
+        { description: { $regex: escaped, $options: 'i' } },
+        { sku: { $regex: escaped, $options: 'i' } },
+      ],
+    };
   }
 
   async regenerateQR(id: string): Promise<Product> {
