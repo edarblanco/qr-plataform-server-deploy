@@ -1,6 +1,7 @@
 import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
 import { Product } from '../../products/entities/product.entity';
 import { User } from '../../users/entities/user.entity';
+import { Customer } from '../../customers/entities/customer.entity';
 import { LeadStatus } from '../schemas/lead.schema';
 
 // Register enum for GraphQL
@@ -58,6 +59,9 @@ export class Lead {
 
   @Field(() => ID, { nullable: true })
   customerId?: string;
+
+  @Field(() => Customer, { nullable: true })
+  customer?: Customer;
 
   @Field()
   clientName: string;

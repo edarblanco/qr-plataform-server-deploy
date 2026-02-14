@@ -37,6 +37,12 @@ type CSVExportResult {
   url: String!
 }
 
+input CartItemInput {
+  price: Float!
+  productId: String!
+  quantity: Int!
+}
+
 input ConvertQuotationToLeadInput {
   clientEmail: String!
   clientName: String!
@@ -170,6 +176,7 @@ type Lead {
   clientName: String!
   clientPhone: String
   createdAt: DateTime!
+  customer: Customer
   customerId: ID
   description: String
   id: ID!
@@ -249,7 +256,9 @@ type Mutation {
   sendTestNotification: Boolean!
   startWorkingOnLead(id: ID!): Lead!
   subscribeToPush(subscription: PushSubscriptionInput!): Boolean!
+  syncCart(items: [CartItemInput!]!, sessionId: String!, totalValue: Float!, userId: String): Boolean!
   toggleUserStatus(id: ID!): User!
+  trackScan(ip: String, productId: String!, source: String, userAgent: String): Boolean!
   unsubscribeFromPush(endpoint: String!): Boolean!
   updateAvailability(input: UpdateAvailabilityInput!): User!
   updateCustomer(id: ID!, input: UpdateCustomerInput!): Customer!
@@ -332,6 +341,7 @@ type Query {
   analyticsStatusDistribution(endDate: DateTime, startDate: DateTime): StatusDistributionAnalytics!
   analyticsTimeSeries(endDate: DateTime!, period: String! = "day", startDate: DateTime!): AnalyticsTimeSeries!
   availableVendedores: [User!]!
+  cartAbandonmentRate(endDate: DateTime, startDate: DateTime): Float!
   customer(id: ID!): Customer
   customers: [Customer!]!
   exportCSV: CSVExportResult!
@@ -339,6 +349,7 @@ type Query {
   inventoryLog(id: ID!): InventoryLog
   inventoryLogs(limit: Int, productId: String, skip: Int): [InventoryLog!]!
   lead(id: ID!): Lead
+  leadConversionByUser(endDate: DateTime, startDate: DateTime): [UserConversion!]!
   leads(limit: Int, skip: Int, status: LeadStatus): [Lead!]!
   me: User!
   myAssignedLeads: [Lead!]!
@@ -354,6 +365,7 @@ type Query {
   quotationPdf(id: ID!): String!
   quotations(createdBy: ID, customerId: ID, status: String): [Quotation!]!
   revalidateToken: AuthPayload!
+  topScannedProducts(limit: Int! = 5): [TopProduct!]!
   unreadCount: Int!
   user(id: ID!): User
   userStats: UserStats!
@@ -545,6 +557,14 @@ enum UserAvailability {
   available
   busy
   offline
+}
+
+type UserConversion {
+  completedLeads: Int!
+  conversionRate: Float!
+  totalLeads: Int!
+  userId: ID!
+  userName: String!
 }
 
 type UserStats {

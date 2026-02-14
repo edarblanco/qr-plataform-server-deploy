@@ -26,6 +26,8 @@ import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/enums/permission.enum';
 import { LeadStatus } from './schemas/lead.schema';
 import { LeadAssignmentService } from './lead-assignment.service';
+import { CustomersService } from '../customers/customers.service';
+import { Customer } from '../customers/entities/customer.entity';
 
 @ObjectType()
 export class QueueStats {
@@ -45,6 +47,7 @@ export class LeadsResolver {
     private readonly leadsService: LeadsService,
     private readonly productsService: ProductsService,
     private readonly leadAssignmentService: LeadAssignmentService,
+    private readonly customersService: CustomersService,
   ) {}
 
   @Query(() => [Lead], { name: 'leads' })
@@ -151,6 +154,13 @@ export class LeadsResolver {
   async processLeadQueue(): Promise<boolean> {
     await this.leadAssignmentService.processQueue();
     return true;
+  }
+
+  // Field resolver to load related customer
+  @ResolveField(() => Customer, { nullable: true })
+  async customer(@Parent() lead: Lead): Promise<Customer | null> {
+    if (!lead.customerId) return null;
+    return this.customersService.findOne(lead.customerId);
   }
 
   // Field resolver to load related product

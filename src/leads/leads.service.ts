@@ -175,7 +175,7 @@ export class LeadsService {
     const lead = await this.findOne(leadId);
 
     // Verify the lead is assigned to this vendedor
-    if (lead.assignedTo !== vendedorId) {
+    if (lead.assignedTo?.toString() !== vendedorId) {
       throw new NotFoundException('Lead no asignado a este vendedor');
     }
 
@@ -191,7 +191,7 @@ export class LeadsService {
     const lead = await this.findOne(leadId);
 
     // Verify the lead is assigned to this vendedor
-    if (lead.assignedTo !== vendedorId) {
+    if (lead.assignedTo?.toString() !== vendedorId) {
       throw new NotFoundException('Lead no asignado a este vendedor');
     }
 
@@ -207,7 +207,7 @@ export class LeadsService {
     const lead = await this.findOne(leadId);
 
     // Verify the lead is assigned to this vendedor
-    if (lead.assignedTo !== vendedorId) {
+    if (lead.assignedTo?.toString() !== vendedorId) {
       throw new NotFoundException('Lead no asignado a este vendedor');
     }
 

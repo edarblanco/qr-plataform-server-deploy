@@ -19,7 +19,7 @@ export class PushSubscription extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   userId: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   endpoint: string;
 
   @Prop({
